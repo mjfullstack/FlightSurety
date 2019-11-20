@@ -54,7 +54,7 @@ contract FlightSuretyData {
             name: "Uno Air",
             isRegistered: true,
             isFunded: true,
-            balance: 10 ether,
+            balance: 10,
             // isActive: true,
             wallet: firstAirline
         });
@@ -176,11 +176,12 @@ contract FlightSuretyData {
         // pure
     {
         require(!airlines[_name].isRegistered, "Airline is already registered.");
+        require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         // Register new airline 
         airlines[_name] = Airline ({
             name: _name,
             isRegistered: true,
-            isFunded: _bal >= 10 ether ? true : false,
+            isFunded: true, // _bal >= 10 ether ? true : false,
             balance: _bal,
             // isActive: airlines[_name].isRegistered && airlines[_name].isFunded,
             wallet: _addr
@@ -199,6 +200,30 @@ contract FlightSuretyData {
         returns (bool)
     {
         return airlines[_name].isRegistered;
+    }
+
+   /**
+    * @dev Retrieve a registered airline from registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */   
+    function retrieveAirline(string _name)
+        external
+        view
+        returns (string airName, bool airIsRegd, bool airIsFunded, uint256 airBal, address airAddr)
+    {
+            airName = airlines[_name].name;
+            airIsRegd = airlines[_name].isRegistered;
+            airIsFunded = airlines[_name].isFunded;
+            airBal = airlines[_name].balance;
+            airAddr = airlines[_name].wallet;
+        return (
+            airName,
+            airIsRegd,
+            airIsFunded,
+            airBal,
+            airAddr
+        );
     }
 
    /**
