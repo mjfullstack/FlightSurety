@@ -15,17 +15,20 @@ contract FlightSuretyApp {
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
+    // Add "state variable" for the external data contract
+    FlightSuretyData flightSuretyData; // NEEDS TO BE INITIALIZED... see Constructor
 
     // Flight status codees
     uint8 private constant STATUS_CODE_UNKNOWN = 0;
     uint8 private constant STATUS_CODE_ON_TIME = 10;
-    uint8 private constant STATUS_CODE_LATE_AIRLINE = 20;
+    uint8 private constant STATUS_CODE_LATE_AIRLINE = 20; // MWJ: Only one for triggering payment process per VIDEO
     uint8 private constant STATUS_CODE_LATE_WEATHER = 30;
     uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
     uint8 private constant STATUS_CODE_LATE_OTHER = 50;
 
     address private contractOwner;          // Account used to deploy contract
 
+     // For ORACLES...
     struct Flight {
         bool isRegistered;
         uint8 statusCode;
@@ -71,22 +74,33 @@ contract FlightSuretyApp {
     * @dev Contract constructor
     *
     */
-    constructor
-                                (
-                                ) 
-                                public 
+    constructor(
+        // Address parameter for data contract
+        // Passed the address of the deployed instance
+        // of the data contract
+        // data contract is deployed first / previously
+        // ONLY here and NOT on data contract because
+        // The calls are UNIDIRECTIONAL - only calling
+        // INTO the data contract from here - NEVER from
+        // there to here
+        address dataContractAddr // INPUT to constructor
+    ) 
+        public 
     {
         contractOwner = msg.sender;
+        flightSuretyData = FlightSuretyData(dataContractAddr);
     }
 
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
-    function isOperational() 
-                            public 
-                            pure 
-                            returns(bool) 
+    function isOperational(
+
+    ) 
+        public 
+        pure 
+        returns(bool) 
     {
         return true;  // Modify to call data contract's status
     }
@@ -100,12 +114,11 @@ contract FlightSuretyApp {
     * @dev Add an airline to the registration queue
     *
     */   
-    function registerAirline
-                            (   
-                            )
-                            external
-                            pure
-                            returns(bool success, uint256 votes)
+    function registerAirline(
+    )
+        external
+        pure
+        returns(bool success, uint256 votes)
     {
         return (success, 0);
     }
@@ -115,11 +128,10 @@ contract FlightSuretyApp {
     * @dev Register a future flight for insuring.
     *
     */  
-    function registerFlight
-                                (
-                                )
-                                external
-                                pure
+    function registerFlight(
+    )
+        external
+        pure
     {
 
     }
@@ -128,27 +140,26 @@ contract FlightSuretyApp {
     * @dev Called after oracle has updated flight status
     *
     */  
-    function processFlightStatus
-                                (
-                                    address airline,
-                                    string memory flight,
-                                    uint256 timestamp,
-                                    uint8 statusCode
-                                )
-                                internal
-                                pure
+    function processFlightStatus(
+        address airline,
+        string memory flight,
+        uint256 timestamp,
+        uint8 statusCode
+    )
+        internal
+        pure
     {
+
     }
 
 
     // Generate a request for oracles to fetch flight information
-    function fetchFlightStatus
-                        (
-                            address airline,
-                            string flight,
-                            uint256 timestamp                            
-                        )
-                        external
+    function fetchFlightStatus(
+        address airline,
+        string flight,
+        uint256 timestamp                            
+    )
+        external
     {
         uint8 index = getRandomIndex(msg.sender);
 
@@ -163,7 +174,7 @@ contract FlightSuretyApp {
     } 
 
 
-// region ORACLE MANAGEMENT
+// region ORACLE MANAGEMENT - From ORACLES CLass/Section/Video/Lessons
 
     // Incremented to add pseudo-randomness at various points
     uint8 private nonce = 0;    
@@ -335,3 +346,13 @@ contract FlightSuretyApp {
 // endregion
 
 }   
+
+// Provide EXTERNAL CONTRACT REFERENCE... C++ Prototype like
+contract FlightSuretyData {
+    function registerAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
+    )
+    external;
+}

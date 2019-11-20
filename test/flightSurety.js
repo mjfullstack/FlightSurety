@@ -8,6 +8,24 @@ contract('Flight Surety Tests', async (accounts) => {
   before('setup contract', async () => {
     config = await Test.Config(accounts);
     await config.flightSuretyData.authorizeCaller(config.flightSuretyApp.address);
+    console.log(`FlightSurety in before: flightSuretyApp.address: ${config.flightSuretyApp.address}`); // 
+    let beforeIsAuthed = await config.flightSuretyData.checkCallerStatus(config.flightSuretyApp.address);
+    console.log(`FlightSurety in before: beforeIsAuthed: ${beforeIsAuthed}`);
+  });
+
+  it('Can authorize APP contract in DATA Contract...', async () => {
+    
+    // ARRANGE
+    // Done in the 'before' above ONCE for the tests...
+
+    // ACT
+    let isAuthed = await config.flightSuretyData.checkCallerStatus(config.flightSuretyApp.address);
+    console.log(`FlightSurety Can Auth App isAuthed: ${isAuthed}`);
+    console.log(`FlightSurety Can Auth App: flightSuretyApp.address: ${config.flightSuretyApp.address}`);
+
+    // ASSERT
+    assert.equal(isAuthed, true, "APP contract could not get authorized");
+
   });
 
   /****************************************************************************************/
