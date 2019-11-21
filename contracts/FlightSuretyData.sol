@@ -16,6 +16,8 @@ contract FlightSuretyData {
         uint256 balance;
         // bool isActive;
         address wallet;
+        uint256 currVoteCountM;
+        uint256 currTtlVotersN;
     }
 
     struct Passenger {
@@ -32,11 +34,20 @@ contract FlightSuretyData {
     mapping(address => bool) authorizedContracts;       // Mapping: which contracts can call in
     mapping(string => Airline) airlines;                // Mapping for storing airlines
     mapping(string => Passenger) passengers;            // Mapping for storing passengers
+    uint256 totalVoters = 1; // The first airline is registered by the constructor, so 1 not 0
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
+    // Production events
+    event AirlineRegisteredDATA(bool _isRegd);
 
+    // Define debugging event
+    event LoggingDATA(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
+
+    /********************************************************************************************/
+    /*                                       CONSTRUCTOR                                        */
+    /********************************************************************************************/
 
     /**
     * @dev Constructor
@@ -56,7 +67,9 @@ contract FlightSuretyData {
             isFunded: true,
             balance: 10,
             // isActive: true,
-            wallet: firstAirline
+            wallet: firstAirline,
+            currVoteCountM: 1,
+            currTtlVotersN: 1 // FIRST AIRLINE
         });
     }
 
@@ -174,9 +187,13 @@ contract FlightSuretyData {
     )
         external
         // pure
+        // Don't think this can work since changing things on the blockchain takes TIME!!!
+        // SO... use emit events instead like Supplychain did
+        returns(bool) 
     {
         require(!airlines[_name].isRegistered, "Airline is already registered.");
         require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        totalVoters = totalVoters.add(1); // count of successful registrations
         // Register new airline 
         airlines[_name] = Airline ({
             name: _name,
@@ -184,10 +201,20 @@ contract FlightSuretyData {
             isFunded: true, // _bal >= 10 ether ? true : false,
             balance: _bal,
             // isActive: airlines[_name].isRegistered && airlines[_name].isFunded,
-            wallet: _addr
+            wallet: _addr,
+            currVoteCountM: 1,
+            currTtlVotersN: totalVoters
         });
+        emit AirlineRegisteredDATA(airlines[_name].isRegistered);
+        emit LoggingDATA("FS DATA registerAirline(): ", 
+            airlines[_name].name, 
+            airlines[_name].balance, 
+            airlines[_name].currTtlVotersN, 
+            FlightSuretyData.isAirlineRegistered(_name),
+            contractOwner
+        );
+        return airlines[_name].isRegistered;
     }
-
 
    /**
     * @dev CHECK IF an airline is in registration list
@@ -195,7 +222,8 @@ contract FlightSuretyData {
     *
     */   
     function isAirlineRegistered(string _name)
-        external
+        // external
+        public
         view
         returns (bool)
     {
@@ -210,19 +238,32 @@ contract FlightSuretyData {
     function retrieveAirline(string _name)
         external
         view
-        returns (string airName, bool airIsRegd, bool airIsFunded, uint256 airBal, address airAddr)
+        returns (
+            string airName, 
+            bool airIsRegd, 
+            bool airIsFunded, 
+            uint256 airBal, 
+            address airAddr,
+            uint256 airVoteCount,
+            uint256 airTtlVoters
+        )
     {
             airName = airlines[_name].name;
             airIsRegd = airlines[_name].isRegistered;
             airIsFunded = airlines[_name].isFunded;
             airBal = airlines[_name].balance;
             airAddr = airlines[_name].wallet;
+            airVoteCount = airlines[_name].currVoteCountM;
+            airTtlVoters = airlines[_name].currTtlVotersN;
+
         return (
             airName,
             airIsRegd,
             airIsFunded,
             airBal,
-            airAddr
+            airAddr,
+            airVoteCount,
+            airTtlVoters
         );
     }
 

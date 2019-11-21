@@ -1,4 +1,5 @@
 pragma solidity ^0.4.25;
+// pragma experimental ABIEncoderV2; // MWJ TESTING RETURNING A STRUCT...
 
 // It's important to avoid vulnerabilities due to numeric overflow bugs
 // OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
@@ -37,7 +38,27 @@ contract FlightSuretyApp {
     }
     mapping(bytes32 => Flight) private flights;
 
- 
+    // My Additions
+    struct AirlineView {
+        string name;
+        bool isRegistered;
+        bool isFunded;
+        uint256 balance;
+        // bool isActive;
+        address wallet;
+        uint256 currVoteCountM;
+        uint256 currTtlVotersN;
+    }
+
+    /********************************************************************************************/
+    /*                                       EVENT DEFINITIONS                                  */
+    /********************************************************************************************/
+    // Production events
+    event AirlineRegisteredAPP(bool _success);
+
+    // Define debugging event
+    event LoggingAPP(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
+
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
     /********************************************************************************************/
@@ -111,18 +132,84 @@ contract FlightSuretyApp {
 
   
    /**
-    * @dev Add an airline to the registration queue
+    * @dev ADD an airline to the registration list
     *
     */   
     function registerAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
     )
         external
-        pure
-        returns(bool success, uint256 votes)
+        returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
     {
-        return (success, 0);
+        uint256 votes;
+        require(!flightSuretyData.isAirlineRegistered(_name), "Airline is already registered.");
+        require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        // Register new airline 
+        success = flightSuretyData.registerAirline(_name, _bal, _addr);
+        // When registered, it will have 1 vote, but could retrieve actual value
+        if (success) {votes = 1;} else {votes = 0;}
+        // return (success, votes);
+        emit AirlineRegisteredAPP(success);
+        emit LoggingAPP("FS APP registerAirline(): ", 
+            _name, 
+            _bal, 
+            votes,
+            // success,
+            flightSuretyData.isAirlineRegistered(_name), 
+            _addr
+        );
+        
+        return (success);
     }
 
+   /**
+    * @dev Retrieve a registered airline from registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */   
+    function retrieveAirline(string _name)
+        external
+        view
+        returns (
+            string airName, 
+            bool airIsRegd, 
+            bool airIsFunded, 
+            uint256 airBal, 
+            address airAddr,
+            uint256 airVoteCount,
+            uint256 airTtlVoters
+        )
+    {
+        // THIS WORKS for returning an object/structure
+        AirlineView memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.currVoteCountM,
+         airlineView.currTtlVotersN
+        ) = flightSuretyData.retrieveAirline(_name);
+            airName = airlineView.name;
+            airIsRegd = airlineView.isRegistered;
+            airIsFunded = airlineView.isFunded;
+            airBal = airlineView.balance;
+            airAddr = airlineView.wallet;
+            airVoteCount = airlineView.currVoteCountM;
+            airTtlVoters = airlineView.currTtlVotersN;
+
+        return (
+            airName,
+            airIsRegd,
+            airIsFunded,
+            airBal,
+            airAddr,
+            airVoteCount,
+            airTtlVoters
+        );
+    }
 
    /**
     * @dev Register a future flight for insuring.
@@ -347,12 +434,31 @@ contract FlightSuretyApp {
 
 }   
 
-// Provide EXTERNAL CONTRACT REFERENCE... C++ Prototype like
+// Provide EXTERNAL CONTRACT REFERENCES... Similar to C++ Prototype
 contract FlightSuretyData {
     function registerAirline(
         string  _name,
         uint256 _bal,
         address _addr
     )
-    external;
+    external
+    returns (bool);
+
+    function isAirlineRegistered(string _name)
+        external
+        returns (bool);
+
+    function retrieveAirline(string _name)
+        external
+        view
+        returns (
+            string airName, 
+            bool airIsRegd, 
+            bool airIsFunded, 
+            uint256 airBal, 
+            address airAddr,
+            uint256 airVoteCount,
+            uint256 airTtlVoters
+        );
+
 }
