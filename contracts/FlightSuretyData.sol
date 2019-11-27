@@ -103,7 +103,7 @@ contract FlightSuretyData {
     /**
     * @dev Modifier that requires the "authorizedContracts" address to be the function caller
     */
-    modifier isCallerAuthorized() // requireAuthorizedContract
+    modifier requireAuthorizedCaller() // requireAuthorizedContract
     {
         require(authorizedContracts[msg.sender], "Caller is not authorized to call this contract");
         _;
@@ -189,7 +189,7 @@ contract FlightSuretyData {
         // pure
         // Don't think this can work since changing things on the blockchain takes TIME!!!
         // SO... use emit events instead like Supplychain did
-        returns(bool) 
+        returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
     {
         require(!airlines[_name].isRegistered, "Airline is already registered.");
         require(_bal >= 10, "Insufficuent funds provided to register your airline.");
@@ -220,14 +220,46 @@ contract FlightSuretyData {
     * @dev CHECK IF an airline is in registration list
     *      Can only be called from FlightSuretyApp contract
     *
-    */   
+    */
+    // THIS METHOD FAILS TO PRODUCE 'TRUE' WHEN AIRLINE IS REGISTERED
+    // SWITCHING TO NEW APPROACH BELOW...
+    // function isAirlineRegistered(string _name)
+    //     // external
+    //     public
+    //     view
+    //     returns (bool airlineIsRegistered)
+    // {
+    //     string airName = airlines[_name].name;        
+    //     airlineIsRegistered = airlines[_name].isRegistered;
+    //     return (airlineIsRegistered);
+    // }
+    // SINCE THE retrieveAirline() FUNCTION CAN GET THE CORRECT ANSWER(S),
+    // CALL IT AND ONLY RETURN THE ITEM OF INTEREST...
     function isAirlineRegistered(string _name)
         // external
         public
         view
-        returns (bool)
+        returns (bool airlineIsRegistered)
     {
-        return airlines[_name].isRegistered;
+        Airline memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.currVoteCountM,
+         airlineView.currTtlVotersN
+        ) = FlightSuretyData.retrieveAirline(_name);
+            string memory airName = airlineView.name;
+            airlineIsRegistered = airlineView.isRegistered;
+            bool airIsFunded = airlineView.isFunded;
+            // NOTE 1: CompilerError: Stack too deep, try removing local variables... So commented
+            // NOTE 2: Doing so STILL can't return the correct value for airlineIsRegistered!
+            // uint256 airBal = airlineView.balance;
+            // address airAddr = airlineView.wallet;
+            // uint256 airVoteCount = airlineView.currVoteCountM;
+            // uint256 airTtlVoters = airlineView.currTtlVotersN;
+        return (airlineIsRegistered);
     }
 
    /**
@@ -236,7 +268,8 @@ contract FlightSuretyData {
     *
     */   
     function retrieveAirline(string _name)
-        external
+        // external
+        public
         view
         returns (
             string airName, 
@@ -248,13 +281,13 @@ contract FlightSuretyData {
             uint256 airTtlVoters
         )
     {
-            airName = airlines[_name].name;
-            airIsRegd = airlines[_name].isRegistered;
-            airIsFunded = airlines[_name].isFunded;
-            airBal = airlines[_name].balance;
-            airAddr = airlines[_name].wallet;
-            airVoteCount = airlines[_name].currVoteCountM;
-            airTtlVoters = airlines[_name].currTtlVotersN;
+        airName = airlines[_name].name;
+        airIsRegd = airlines[_name].isRegistered;
+        airIsFunded = airlines[_name].isFunded;
+        airBal = airlines[_name].balance;
+        airAddr = airlines[_name].wallet;
+        airVoteCount = airlines[_name].currVoteCountM;
+        airTtlVoters = airlines[_name].currTtlVotersN;
 
         return (
             airName,

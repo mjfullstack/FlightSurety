@@ -7,10 +7,13 @@ pragma solidity ^0.4.25;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 
+import "./FlightSuretyAccessControl/AirlineRole.sol";
+// import "../FlightSuretyCore/Ownable.sol"; // TBD
+
 /************************************************** */
 /* FlightSurety Smart Contract                      */
 /************************************************** */
-contract FlightSuretyApp {
+contract FlightSuretyApp is AirlineRole {
     using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to "prototype" in Javascript)
 
     /********************************************************************************************/
@@ -104,12 +107,14 @@ contract FlightSuretyApp {
         // The calls are UNIDIRECTIONAL - only calling
         // INTO the data contract from here - NEVER from
         // there to here
-        address dataContractAddr // INPUT to constructor
+        address dataContractAddr,   // INPUT to constructor
+        address firstAirlineAddr    // INPUT to constructor
     ) 
         public 
     {
         contractOwner = msg.sender;
         flightSuretyData = FlightSuretyData(dataContractAddr);
+        addAirline(firstAirlineAddr); // Add to list of airlines for Role Checking        
     }
 
     /********************************************************************************************/
@@ -140,6 +145,7 @@ contract FlightSuretyApp {
         uint256 _bal,
         address _addr
     )
+        onlyAirline
         external
         returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
     {
@@ -147,6 +153,7 @@ contract FlightSuretyApp {
         require(!flightSuretyData.isAirlineRegistered(_name), "Airline is already registered.");
         require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         // Register new airline 
+        addAirline(_addr); // Add to list of airlines for Role Checking        
         success = flightSuretyData.registerAirline(_name, _bal, _addr);
         // When registered, it will have 1 vote, but could retrieve actual value
         if (success) {votes = 1;} else {votes = 0;}
@@ -445,7 +452,9 @@ contract FlightSuretyData {
     returns (bool);
 
     function isAirlineRegistered(string _name)
-        external
+        // external
+        public
+        view
         returns (bool);
 
     function retrieveAirline(string _name)
