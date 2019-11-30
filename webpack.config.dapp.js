@@ -9,10 +9,15 @@ module.exports = {
   },
   module: {
     rules: [
-    {
+      {
         test: /\.(js|jsx)$/,
-        use: "babel-loader",
-        exclude: /node_modules/
+        exclude: /node_modules/,
+        // use: "babel-loader",
+        loader: 'babel-loader',
+        options: {
+            presets: ['@babel/preset-env',
+                      {'plugins': ['@babel/plugin-proposal-class-properties']}]
+        }
       },
       {
         test: /\.css$/,

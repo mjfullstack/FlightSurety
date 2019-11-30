@@ -7,8 +7,9 @@ module.exports = function(deployer) {
     let firstAirline = '0xf17f52151EbEF6C7334FAD080c5704D77216b732'; // account[1] for our test suite
     deployer.deploy(FlightSuretyData, firstAirline)
     .then(() => {
+        let firstAirline = '0xf17f52151EbEF6C7334FAD080c5704D77216b732'; // account[1] for our test suite
         console.log(`deploy: FlightSuretyData.address: ${FlightSuretyData.address}`);
-        return deployer.deploy(FlightSuretyApp, FlightSuretyData.address)
+        return deployer.deploy(FlightSuretyApp, FlightSuretyData.address, firstAirline)
         .then(() => {
             let config = {
                 localhost: {
