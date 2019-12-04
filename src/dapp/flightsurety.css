@@ -5,7 +5,7 @@ body {
 }
 
 .container {
-    margin-top: 400px;
+    margin-top: 100px;
     background-color: #000;
     opacity: 0.9;
     color: #fff;
@@ -20,9 +20,9 @@ h5 {
     color: #999999;
 }
 
-section {
+/* section {
     margin-bottom: 50px;
-}
+} */
 
 .field {
     font-weight: bold;
@@ -31,6 +31,7 @@ section {
 
 .field-value {
     color: #0e7fa8;
+    font-size: 18px;
 }
 
 label.form {

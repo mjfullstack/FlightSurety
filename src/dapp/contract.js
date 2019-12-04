@@ -53,4 +53,18 @@ export default class Contract {
                 callback(error, payload);
             });
     }
+
+    retrieveAirline(airName, callback) {
+        let self = this;
+        // let payload = {
+        //     airline: self.airlines[0],
+        //     flight: flight,
+        //     timestamp: Math.floor(Date.now() / 1000)
+        // } 
+        self.flightSuretyApp.methods
+            .retrieveAirline(airName)
+            .call({ from: self.owner}, (error, results) => {
+                callback(error, results);
+            });
+    }
 }
