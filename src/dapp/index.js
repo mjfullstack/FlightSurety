@@ -31,10 +31,24 @@ import './flightsurety.css';
             console.log(error,result);
             // let resArray = [result[0], result[1], result[2], result[3], result[4] ];
             console.log(result.airName, result.airIsRegd, result.airIsFunded, result.airAddr);
-            displayAir('Airline List', 'Retrieve Airline Details', [ { label: 'Airline 1 Status', error: error, value: result} ]);
+            displayAir('Airline List', 'Retrieve Airline Details', [ { label: 'Airline Status', error: error, value: result} ]);
         });
     
 
+        // REGISTER AIRLINE: User-submitted transaction
+        displayRegAirline('Airline Registration', 'Add New Airlines to the Program', [ { label: 'New Airline to Register'} ]);
+        DOM.elid('reg-airline-btn').addEventListener('click', () => {
+            let airlineName = DOM.elid('reg-airline-name').value;
+            let airlineFunds = DOM.elid('reg-airline-funds').value;
+            // let airlineFunds = web3.toWei(DOM.elid('reg-airline-funds').value, "ether");
+            let airlineAddress = DOM.elid('reg-airline-addr').value;
+            // Write transaction
+            console.log(airlineName, airlineFunds, airlineAddress);
+            contract.registerAirline(airlineName, airlineFunds, airlineAddress, (error, result) => {
+                displayRegAirline('Airline Registration', 'Add New Airlines to the Program', [ { label: 'New Airline to Register', error: error, value: result} ]);
+            });
+        })
+    
         // User-submitted transaction
         displayOracles('Oracles', 'Trigger oracles', [ { label: 'Fetch Flight Status'} ]);
         DOM.elid('submit-oracle').addEventListener('click', () => {
@@ -82,6 +96,7 @@ function displayOps(title, description, count, results) {
     displayDiv.append(section);
 }
 
+// Displays a SINGLE Airline retrieved by NAME...
 function displayAir(title, description, results) {
     let displayDiv = DOM.elid("display-airline");
     let section = DOM.section();
@@ -105,6 +120,32 @@ function displayAir(title, description, results) {
     displayDiv.append(section);
 }
 
+function displayRegAirline(title, description, results) {
+    let displayDiv = DOM.elid("register-airline");
+    let section = DOM.section();
+    section.appendChild(DOM.h2(title));
+    section.appendChild(DOM.h5(description));
+    // results.map((result) => {
+    let row = section.appendChild(DOM.div({className:'row'}));
+    row.appendChild(DOM.div({className: 'col-sm-4 field'}, results[0].label));
+    if (results.error) {
+        row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, String(results.error)));
+    } else {
+        console.log(results);
+        console.log(results.error);
+        console.log(results.value);
+        // console.log(results[0].value.airName, results[0].value.airIsRegd, results[0].value.airIsFunded, results[0].value.airAddr);
+        // let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
+        // let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
+        // let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
+        // row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `Name: ${String(results[0].value.airName)}, Reg'd: ${String(results[0].value.airIsRegd)}, Funded: ${String(results[0].value.airIsFunded)}, Addr: ${String(results[0].value.airAddr)}` ));
+        // row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+    }
+    section.appendChild(row);
+    // })
+    displayDiv.append(section);
+}
+
 function displayOracles(title, description, results) {
     let displayDiv = DOM.elid("display-oracles");
     let section = DOM.section();
@@ -122,9 +163,5 @@ function displayOracles(title, description, results) {
     })
     displayDiv.append(section);
 }
-
-
-
-
 
 

@@ -67,4 +67,19 @@ export default class Contract {
                 callback(error, results);
             });
     }
+
+    registerAirline(_name, _funds, _addr, callback) {
+        let self = this;
+        console.log(self.airlines[0]);
+        self.flightSuretyApp.methods
+        // .registerAirline(_name, _funds, _addr, { from: self.airlines[0]}, (error, result) => { // 5 vs 3 args
+            .registerAirline(_name, _funds, _addr) 
+            // .send({ from: self.airlines[0], value: 10}, (error, result) => { // function is not payable
+            // .send({ from: self.airlines[0], value: 0}, (error, result) => { // function is not payable
+            .send({ from: self.airlines[0]}, (error, result) => { // Error: no value
+            // .sendTransaction({ from: self.airlines[0]}, (error, result) => { // Error: No such function
+                callback(error, result);
+            });
+    }
+
 }
