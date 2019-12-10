@@ -8,11 +8,11 @@ import './flightsurety.css';
 
     let result = null;
 
-    let contract = new Contract('localhost', () => {
+    let contract = new Contract('localhost', async () => {
         let opsStatusCheckCount = 0;
 
         // Read Ops Status at Start-Up and...
-        contract.isOperational((error, result) => {
+        await contract.isOperational((error, result) => {
             console.log(error,result);
             displayOps('Operational Status', 'Check if contract is operational', opsStatusCheckCount, [ { label: 'Operational Status', error: error, value: result} ]);
         });
@@ -27,7 +27,7 @@ import './flightsurety.css';
         });
     
         // Retrieve Airline
-        contract.retrieveAirline("Uno Air", (error, result) => {
+        await contract.retrieveAirline("Uno Air", (error, result) => {
             console.log(error,result);
             // let resArray = [result[0], result[1], result[2], result[3], result[4] ];
             console.log(result.airName, result.airIsRegd, result.airIsFunded, result.airAddr);
