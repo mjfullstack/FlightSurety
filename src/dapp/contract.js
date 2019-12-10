@@ -68,7 +68,6 @@ export default class Contract {
     // getMetaskAccountID: function () {
     async getMetaskAccountID() {
         let self = this;
-        // web3 = new Web3(App.web3Provider);
         web3 = new Web3(self.web3);
         console.log("getMetaskAccountID: self.web3");
         console.log(self.web3);
@@ -93,28 +92,11 @@ export default class Contract {
         async initFlightSuretyApp() {
         console.log(`Hello World from NEW initFlightSuretyApp, OLD initSupplyChain!!!`);
         let self = this;
-        /// Source the truffle compiled smart contracts... 
-        // This method fails... maybe NOT the way to do it with window.ethereum being web3 provider...
-        // self.flightSuretyApp = new self.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
-        
         /// Source the truffle compiled smart contracts
-        // var jsonFlightSuretyApp ='../../build/contracts/FlightSuretyApp.json';
-        // console.log(`initFlightSuretyApp: jsonFlightSuretyApp`);
-        // console.log(jsonFlightSuretyApp);
-
         // Adding for TruffleContract
-        // Works, but error with ether/utils/web3.js xmlhttprequest
+        // Works, Added externals in webpack.config.dapp.js for xmlhttprequest
         var contract = require("@truffle/contract");
 
-        // /// JSONfy the smart contracts
-        // await $.getJSON(jsonFlightSuretyApp, async function(data) {
-        //     console.log('initFlightSuretyApp: data');
-        //     console.log(data);
-        //     var FlightSuretyAppArtifact = data;
-        //     self.contracts.FlightSuretyApp = TruffleContract(FlightSuretyAppArtifact);
-        //     self.contracts.FlightSuretyApp.setProvider(self.web3);
-        //     self.flightSuretyApp = self.contracts.FlightSuretyApp;
-        // });
         var FlightSuretyAppArtifact = FlightSuretyApp;
         console.log("contract");
         console.log(contract);
@@ -125,8 +107,8 @@ export default class Contract {
     }
 
     async initialize(callback) {
-
-        // web3 = new Web3(this.flightSuretyApp);
+        let self = this;
+        web3 = new Web3(self.web3);
         await web3.eth.getAccounts((error, accts) => {
             if (error) {
                 console.log('Error:',error);
@@ -194,24 +176,15 @@ export default class Contract {
 
     async retrieveAirline(airName, callback) {
         let self = this;
-        console.log("retrieveAirline: self.flightSuretyApp");
-        console.log(self.flightSuretyApp);
-        console.log("retrieveAirline: self.contracts.FlightSuretyApp");
-        console.log(self.contracts.FlightSuretyApp);
-        // self.flightSuretyApp.methods
-        //     .retrieveAirline(airName)
-        //     .call({ from: self.owner}, (error, results) => {
-        //         callback(error, results);
-        //     });
+        // console.log("retrieveAirline: self.flightSuretyApp");
+        // console.log(self.flightSuretyApp);
+        // console.log("retrieveAirline: self.contracts.FlightSuretyApp");
+        // console.log(self.contracts.FlightSuretyApp);
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-            return instance.retrieveAirline("Uno Air");
-                // App.upc
-                // );
+            return instance.retrieveAirline(airName);
             }).then(function(result) {
-                // $("#ftc-item").text(`plantItem, ${result}`);
-                console.log(`retrieveAirline: result:`);
-                console.log(result);
-                // App.reflectBlockchainInApp(App.upc);
+                // console.log(`retrieveAirline: result:`);
+                // console.log(result);
                 callback(null, result);
             })
             .catch(function(err) {
@@ -221,8 +194,10 @@ export default class Contract {
 
     async registerAirline(_name, _funds, _addr, callback) {
         let self = this;
-        console.log(self.airlines[0]);
-        let _fundsInEther = self.web3.utils.toWei(_funds, "ether");
+        web3 = new Web3(self.web3);
+        // console.log(self.airlines[0]);
+        console.log(`self.owner: ${self.owner}`);
+        let _fundsInEther = web3.utils.toWei(_funds, "ether");
         // self.flightSuretyApp.methods
         // // .registerAirline(_name, _funds, _addr, { from: self.airlines[0]}, (error, result) => { // 5 vs 3 args
         //     .registerAirline(_name, _funds, _addr) 
@@ -233,14 +208,11 @@ export default class Contract {
         //         callback(error, result);
         //     });
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-            return instance.registerAirline(_name, _funds, _addr, { from: self.airlines[0], value: _fundsInEther});
-                // App.upc
-                // );
+            // return instance.registerAirline(_name, _funds, _addr, { from: self.airlines[0], value: _fundsInEther});
+            return instance.registerAirline(_name, _funds, _addr, { from: self.owner, value: _fundsInEther});
             }).then(function(result) {
-                // $("#ftc-item").text(`plantItem, ${result}`);
                 console.log(`retrieveAirline: result:`);
                 console.log(result);
-                // App.reflectBlockchainInApp(App.upc);
                 callback(null, result);
             })
             .catch(function(err) {

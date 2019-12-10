@@ -47,7 +47,6 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.7.6",
-    "child_process": "^1.0.2",
     "ethers": "^4.0.40",
     "fs": "0.0.1-security"
   }

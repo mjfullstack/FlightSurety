@@ -7,6 +7,8 @@ import './flightsurety.css';
 (async() => {
 
     let result = null;
+    let initLookupDispComplete = false;
+    let initRegAirDispComplete = false;
 
     let contract = new Contract('localhost', async () => {
         let opsStatusCheckCount = 0;
@@ -19,7 +21,6 @@ import './flightsurety.css';
         // ALSO read Ops Status when clicked to check it...
         DOM.elid('check-status').addEventListener('click', () => {
             opsStatusCheckCount += 1;
-            // DOM.elid('display-ops').innerHTML("");
             contract.isOperational((error, result) => {
                 console.log(error, result, opsStatusCheckCount);
                 displayOps('Operational Status', 'Check if contract is operational, # ', opsStatusCheckCount, [ { label: 'Operational Status', error: error, value: result} ]);
@@ -31,21 +32,39 @@ import './flightsurety.css';
             console.log(error,result);
             // let resArray = [result[0], result[1], result[2], result[3], result[4] ];
             console.log(result.airName, result.airIsRegd, result.airIsFunded, result.airAddr);
-            displayAir('Airline List', 'Retrieve Airline Details', [ { label: 'Airline Status', error: error, value: result} ]);
+            displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
+            initLookupDispComplete = true;
+            console.log(`result.airIsRegd: ${result.airIsRegd}`);
+        });
+        // ALSO LOOKUP an Airline Status when clicked to check it...
+        DOM.elid('lookup-airline').addEventListener('click', () => {
+            let _name = DOM.elid('lookup-airline-name').value;
+            console.log("_name: ", _name);
+            contract.retrieveAirline(_name, (error, result) => {
+                console.log(error, result, _name);
+                displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
+                console.log(`result.airIsRegd: ${result.airIsRegd}`);
+                if (result.airIsRegd) {
+                    DOM.elid('lookup-airline-name').value = "";
+                }
+            });                
         });
     
 
         // REGISTER AIRLINE: User-submitted transaction
-        displayRegAirline('Airline Registration', 'Add New Airlines to the Program', [ { label: 'New Airline to Register'} ]);
+        displayRegAirline('Airline Registration', 'Add New Airlines to the Program', initRegAirDispComplete, [ { label: 'New Airline to Register'} ]);
+        initRegAirDispComplete = true;
         DOM.elid('reg-airline-btn').addEventListener('click', () => {
             let airlineName = DOM.elid('reg-airline-name').value;
             let airlineFunds = DOM.elid('reg-airline-funds').value;
-            // let airlineFunds = web3.toWei(DOM.elid('reg-airline-funds').value, "ether");
             let airlineAddress = DOM.elid('reg-airline-addr').value;
+            console.log(`airlineName: ${airlineName}`);
+            console.log(`airlineFunds: ${airlineFunds}`);
+            console.log(`airlineAddress: ${airlineAddress}`);
             // Write transaction
             console.log(airlineName, airlineFunds, airlineAddress);
             contract.registerAirline(airlineName, airlineFunds, airlineAddress, (error, result) => {
-                displayRegAirline('Airline Registration', 'Add New Airlines to the Program', [ { label: 'New Airline to Register', error: error, value: result} ]);
+                displayRegAirline('Airline Registration', 'Add New Airlines to the Program', initRegAirDispComplete, [ { label: 'New Airline to Register', error: error, value: result} ]);
             });
         })
     
@@ -97,52 +116,58 @@ function displayOps(title, description, count, results) {
 }
 
 // Displays a SINGLE Airline retrieved by NAME...
-function displayAir(title, description, results) {
+function displayAir(title, description, initDispDone, results) {
     let displayDiv = DOM.elid("display-airline");
     let section = DOM.section();
-    section.appendChild(DOM.h2(title));
-    section.appendChild(DOM.h5(description));
+    if (!initDispDone) {
+        // let hdrRow = section.appendChild(DOM.div({className:'row'}));
+        section.appendChild(DOM.h2(title));
+        section.appendChild(DOM.h5(description));
+    }
     // results.map((result) => {
     let row = section.appendChild(DOM.div({className:'row'}));
-    row.appendChild(DOM.div({className: 'col-sm-4 field'}, results[0].label));
+    row.appendChild(DOM.div({className: 'col col-sm-4 field'}, results[0].label));
     if (results.error) {
-        row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, String(results.error)));
+        row.appendChild(DOM.div({className: 'col col-sm-8 field-value'}, String(results.error)));
     } else {
         console.log(results[0].value.airName, results[0].value.airIsRegd, results[0].value.airIsFunded, results[0].value.airAddr);
         let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
         let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
         let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
         // row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `Name: ${String(results[0].value.airName)}, Reg'd: ${String(results[0].value.airIsRegd)}, Funded: ${String(results[0].value.airIsFunded)}, Addr: ${String(results[0].value.airAddr)}` ));
-        row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        row.appendChild(DOM.div({className: 'col col-sm-8 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
     }
     section.appendChild(row);
     // })
     displayDiv.append(section);
 }
 
-function displayRegAirline(title, description, results) {
+function displayRegAirline(title, description, initDispDone, results) {
     let displayDiv = DOM.elid("register-airline");
     let section = DOM.section();
-    section.appendChild(DOM.h2(title));
-    section.appendChild(DOM.h5(description));
-    // results.map((result) => {
-    let row = section.appendChild(DOM.div({className:'row'}));
-    row.appendChild(DOM.div({className: 'col-sm-4 field'}, results[0].label));
-    if (results.error) {
-        row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, String(results.error)));
+    if (!initDispDone) {
+        section.appendChild(DOM.h2(title));
+        section.appendChild(DOM.h5(description));
     } else {
-        console.log(results);
-        console.log(results.error);
-        console.log(results.value);
-        // console.log(results[0].value.airName, results[0].value.airIsRegd, results[0].value.airIsFunded, results[0].value.airAddr);
-        // let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
-        // let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
-        // let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
-        // row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `Name: ${String(results[0].value.airName)}, Reg'd: ${String(results[0].value.airIsRegd)}, Funded: ${String(results[0].value.airIsFunded)}, Addr: ${String(results[0].value.airAddr)}` ));
-        // row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        // results.map((result) => {
+        let row = section.appendChild(DOM.div({className:'row'}));
+        row.appendChild(DOM.div({className: 'col-sm-4 field'}, results[0].label));
+        if (results.error) {
+            row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, String(results.error)));
+        } else {
+            console.log(results);
+            console.log(results.error);
+            console.log(results.value);
+            console.log(results[0].value.airName, results[0].value.airIsRegd, results[0].value.airIsFunded, results[0].value.airAddr);
+            let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
+            let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
+            let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
+            // row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `Name: ${String(results[0].value.airName)}, Reg'd: ${String(results[0].value.airIsRegd)}, Funded: ${String(results[0].value.airIsFunded)}, Addr: ${String(results[0].value.airAddr)}` ));
+            row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        }
+        section.appendChild(row);
+        // })
     }
-    section.appendChild(row);
-    // })
     displayDiv.append(section);
 }
 
