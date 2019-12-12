@@ -9,7 +9,7 @@ import Web3 from 'web3';
 export default class Contract {
     constructor(network, _callback) {
 
-        let config = Config[network];
+        this.config = Config[network];
         // this.web3 = new Web3(new Web3.providers.HttpProvider(config.url));
         this.initWeb3();
         // this.flightSuretyApp = new this.web3.eth.Contract(FlightSuretyApp.abi, config.appAddress);
@@ -88,7 +88,6 @@ export default class Contract {
         })
     }
 
-    // initSupplyChain: function () {
         async initFlightSuretyApp() {
         console.log(`Hello World from NEW initFlightSuretyApp, OLD initSupplyChain!!!`);
         let self = this;
@@ -114,6 +113,15 @@ export default class Contract {
                 console.log('Error:',error);
                 return;
             }
+
+        // let accts;
+        // const getAccount = async () => {
+        //     accts = await web3.eth.getAccounts();
+        //     // console.log(accts); // STILL only ONE not an array
+        //  };
+        //  getAccount();
+        //  console.log(accts); // undefined
+
 
             this.owner = accts[0];
             console.log(`this.owner = ${this.owner}`);
@@ -192,26 +200,37 @@ export default class Contract {
             });
     }
 
-    async registerAirline(_name, _funds, _addr, callback) {
+    async registerAirline(_name, _addr, _sponsor, callback) {
         let self = this;
         web3 = new Web3(self.web3);
-        // console.log(self.airlines[0]);
         console.log(`self.owner: ${self.owner}`);
-        let _fundsInEther = web3.utils.toWei(_funds, "ether");
-        // self.flightSuretyApp.methods
-        // // .registerAirline(_name, _funds, _addr, { from: self.airlines[0]}, (error, result) => { // 5 vs 3 args
-        //     .registerAirline(_name, _funds, _addr) 
-        //     .send({ from: self.airlines[0], value: _fundsInEther}, (error, result) => { // function is not payable
+        // let _fundsInEther = web3.utils.toWei(_funds, "ether");
+        // // self.flightSuretyApp.methods // OLD METHOD BEFORE WALLET
+        //     // .registerAirline(_name, _funds, _addr, { from: self.airlines[0]}, (error, result) => { // 5 vs 3 args
         //     // .send({ from: self.airlines[0], value: 0}, (error, result) => { // function is not payable
-        //     // .send({ from: self.airlines[0]}, (error, result) => { // Error: no value
-        //     // .sendTransaction({ from: self.airlines[0]}, (error, result) => { // Error: No such function
-        //         callback(error, result);
+        //     // //    callback(error, result);
         //     });
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-            // return instance.registerAirline(_name, _funds, _addr, { from: self.airlines[0], value: _fundsInEther});
-            return instance.registerAirline(_name, _funds, _addr, { from: self.owner, value: _fundsInEther});
+            return instance.registerAirline(_name, _addr, _sponsor, { from: _sponsor});
             }).then(function(result) {
-                console.log(`retrieveAirline: result:`);
+                console.log(`contract.js registerAirline: result:`);
+                console.log(result);
+                callback(null, result);
+            })
+            .catch(function(err) {
+                console.log(err.message);
+            });
+    }
+
+    async fundAirline(_name, _funds, _addr, callback) {
+        let self = this;
+        web3 = new Web3(self.web3);
+        console.log(`self.owner: ${self.owner}`);
+        let _fundsInEther = web3.utils.toWei(_funds, "ether");
+        await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
+            return instance.fundAirline(_name, _funds, _addr, { from: self.owner, value: _fundsInEther});
+            }).then(function(result) {
+                console.log(`contract.js fundAirline: result:`);
                 console.log(result);
                 callback(null, result);
             })

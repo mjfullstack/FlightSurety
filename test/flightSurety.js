@@ -104,7 +104,8 @@ contract('Flight Surety Tests', async (accounts) => {
         bal: 10, // web3.toWei("10", "ether"),
         addr: accounts[1],
         votes: 1,
-        ttlVoters: 1       
+        ttlVoters: 1,
+        sponsor: config.owner
     }
 
     let air2reg = {
@@ -112,7 +113,8 @@ contract('Flight Surety Tests', async (accounts) => {
         bal: 10, // web3.toWei("10", "ether"),
         addr: accounts[2],
         votes: 1,
-        ttlVoters: 2
+        ttlVoters: 2,
+        sponsor: config.owner
     }
 
     // let chkSuccess, chkVotes;
@@ -183,11 +185,13 @@ contract('Flight Surety Tests', async (accounts) => {
     //     }
     // });
     /***  NOTE: CAN'T WATCH EVENTS: The current provider doesn't support subscriptions!  ***/
-
+    console.log(`air2reg.sponsor: ${air2reg.sponsor}`);
+    console.log(`config.owner: ${config.owner}`);
     // ACT
     let isReg1 = await config.flightSuretyData.isAirlineRegistered(air1reg.name);
     let gotAir1 = await config.flightSuretyApp.retrieveAirline(air1reg.name);
-    await config.flightSuretyApp.registerAirline(air2reg.name, air2reg.bal, air2reg.addr);
+    // await config.flightSuretyApp.registerAirline(air2reg.name, air2reg.bal, air2reg.addr);
+    await config.flightSuretyApp.registerAirline(air2reg.name, air2reg.addr, air2reg.sponsor, {from: config.owner}); // from contract owner which matches sponsor
     let gotAir2 = await config.flightSuretyApp.retrieveAirline(air2reg.name);
     // Original function FAILS, returns FALSE when IS S/B TRUE...
     // SO... Changed to new function structure in DATA contract
@@ -223,7 +227,7 @@ contract('Flight Surety Tests', async (accounts) => {
     assert.equal(gotAir2.airName, air2reg.name, "APP can't retrieve 2nd airline NAME via retrieveAirline()");
     assert.equal(gotAir2.airIsRegd, true, "APP can't retrieve 2nd airline isREGISTERED via retrieveAirline()");
     assert.equal(gotAir2.airIsFunded, true, "APP can't retrieve 2nd airline isFUNDED via retrieveAirline()");
-    assert.equal(gotAir2.airBal.toNumber(), air2reg.bal, "APP can't retrieve 2nd airline BALANCE via retrieveAirline()");
+    // assert.equal(gotAir2.airBal.toNumber(), air2reg.bal, "APP can't retrieve 2nd airline BALANCE via retrieveAirline()");
     assert.equal(gotAir2.airAddr, air2reg.addr, "APP can't retrieve 2nd airline ADDRESS via retrieveAirline()");
     assert.equal(gotAir2.airVoteCount.toNumber(), air2reg.votes, "APP can't retrieve 2nd airline VOTE COUNT via retrieveAirline()");
     assert.equal(gotAir2.airTtlVoters.toNumber(), air2reg.ttlVoters, "APP can't retrieve 2nd airline TOTAL VOTERS via retrieveAirline()");
@@ -240,7 +244,8 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
         bal: 10, // web3.toWei("10", "ether"),
         addr: accounts[3],
         votes: 1,
-        ttlVoters: 3       
+        ttlVoters: 3,
+        sponsor: accounts[1]
     }
 
     let air4reg = {
@@ -248,7 +253,8 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
         bal: 10, // web3.toWei("10", "ether"),
         addr: accounts[4],
         votes: 1,
-        ttlVoters: 4
+        ttlVoters: 4,
+        sponsor: accounts[2]
     }
 
     // let chkSuccess, chkVotes;
@@ -279,12 +285,12 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
     /***  NOTE: CAN'T WATCH EVENTS: The current provider doesn't support subscriptions!  ***/
 
     // ACT
-    await config.flightSuretyApp.registerAirline(air3reg.name, air3reg.bal, air3reg.addr, {from: accounts[1]});
+    await config.flightSuretyApp.registerAirline(air3reg.name, air3reg.addr, air3reg.sponsor, {from: accounts[1]});
     // Original function FAILS, returns FALSE when IS S/B TRUE...
     // let isReg3 = await config.flightSuretyData.isAirlineRegistered(air3reg.name);
     let gotAir3 = await config.flightSuretyApp.retrieveAirline(air3reg.name);
     let isReg3 = gotAir3[1]; // struct Airline.isRegistered
-    await config.flightSuretyApp.registerAirline(air4reg.name, air4reg.bal, air4reg.addr, {from: accounts[2]});
+    await config.flightSuretyApp.registerAirline(air4reg.name, air4reg.addr, air4reg.sponsor, {from: accounts[2]});
     let gotAir4 = await config.flightSuretyApp.retrieveAirline(air4reg.name);
     // Original function FAILS, returns FALSE when IS S/B TRUE...
     // SO... Changed to new function structure in DATA contract
@@ -305,14 +311,14 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
     assert.equal(gotAir3.airName, air3reg.name, "APP can't retrieve 3rd airline NAME via retrieveAirline()");
     assert.equal(gotAir3.airIsRegd, true, "APP can't retrieve 3rd airline isREGISTERED via retrieveAirline()");
     assert.equal(gotAir3.airIsFunded, true, "APP can't retrieve 3rd airline isFUNDED via retrieveAirline()");
-    assert.equal(gotAir3.airBal.toNumber(), air3reg.bal, "APP can't retrieve 3rd airline BALANCE via retrieveAirline()");
+    // assert.equal(gotAir3.airBal.toNumber(), air3reg.bal, "APP can't retrieve 3rd airline BALANCE via retrieveAirline()");
     assert.equal(gotAir3.airAddr, air3reg.addr, "APP can't retrieve 3rd airline ADDRESS via retrieveAirline()");
     assert.equal(gotAir3.airVoteCount.toNumber(), air3reg.votes, "APP can't retrieve 3rd airline VOTE COUNT via retrieveAirline()");
     assert.equal(gotAir3.airTtlVoters.toNumber(), air3reg.ttlVoters, "APP can't retrieve 3rd airline TOTAL VOTERS via retrieveAirline()");
     assert.equal(gotAir4.airName, air4reg.name, "APP can't retrieve 4th airline NAME via retrieveAirline()");
     assert.equal(gotAir4.airIsRegd, true, "APP can't retrieve 4th airline isREGISTERED via retrieveAirline()");
     assert.equal(gotAir4.airIsFunded, true, "APP can't retrieve 4th airline isFUNDED via retrieveAirline()");
-    assert.equal(gotAir4.airBal.toNumber(), air4reg.bal, "APP can't retrieve 4th airline BALANCE via retrieveAirline()");
+    // assert.equal(gotAir4.airBal.toNumber(), air4reg.bal, "APP can't retrieve 4th airline BALANCE via retrieveAirline()");
     assert.equal(gotAir4.airAddr, air4reg.addr, "APP can't retrieve 4th airline ADDRESS via retrieveAirline()");
     assert.equal(gotAir4.airVoteCount.toNumber(), air4reg.votes, "APP can't retrieve 4th airline VOTE COUNT via retrieveAirline()");
     assert.equal(gotAir4.airTtlVoters.toNumber(), air4reg.ttlVoters, "APP can't retrieve 4th airline TOTAL VOTERS via retrieveAirline()");

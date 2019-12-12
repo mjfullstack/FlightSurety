@@ -6,6 +6,8 @@ import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract FlightSuretyData {
     using SafeMath for uint256;
 
+  uint256 AIRLINE_REG_FEE = 10; // eth
+
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
@@ -42,6 +44,7 @@ contract FlightSuretyData {
     /********************************************************************************************/
     // Production events
     event AirlineRegisteredDATA(bool _isRegd);
+    event AirlineFundedDATA(bool _isFunded);
 
     // Define debugging event
     event LoggingDATA(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
@@ -108,6 +111,26 @@ contract FlightSuretyData {
     {
         require(authorizedContracts[msg.sender], "Caller is not authorized to call this contract");
         _;
+    }
+
+    // /// @dev Define a modifer that verifies the Caller
+    // modifier verifyCaller (address _address) {
+    //     require(msg.sender == _address); 
+    //     _;
+    // }
+
+    /// @dev Define a modifier that checks if the paid amount is sufficient to cover the price
+    modifier paidEnough(uint256 _price) { 
+        require(msg.value >= _price); 
+        _;
+    }
+    
+    /// @dev Define a modifier that returns overpayment
+    modifier checkValue(address _payer, uint256 _price) {
+        _; // This structure gets the modifier to execute AFTER the function instead of usually first.
+        uint256 amountPaid = msg.value;
+        uint256 amountToReturn = amountPaid.sub(_price);
+        _payer.transfer(amountToReturn);
     }
 
     /********************************************************************************************/
@@ -183,24 +206,23 @@ contract FlightSuretyData {
     */   
     function registerAirline(
         string  _name,
-        uint256 _bal,
+        // uint256 _bal,
         address _addr
     )
         external
-        // pure
         // Don't think this can work since changing things on the blockchain takes TIME!!!
         // SO... use emit events instead like Supplychain did
         returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
     {
         require(!airlines[_name].isRegistered, "Airline is already registered.");
-        require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         totalVoters = totalVoters.add(1); // count of successful registrations
         // Register new airline 
         airlines[_name] = Airline ({
             name: _name,
             isRegistered: true,
             isFunded: true, // _bal >= 10 ether ? true : false,
-            balance: _bal,
+            balance: 0,
             // isActive: airlines[_name].isRegistered && airlines[_name].isFunded,
             wallet: _addr,
             currVoteCountM: 1,
@@ -264,6 +286,22 @@ contract FlightSuretyData {
     }
 
    /**
+    * @dev CHECK IF a previously registered airline has been funded
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */
+    function isAirlineFunded(string _name)
+        // external
+        public
+        view
+        returns (bool airlineIsFunded)
+    {
+        string memory airName = airlines[_name].name;        
+        airlineIsFunded = airlines[_name].isFunded;
+        return (airlineIsFunded);
+    }
+
+   /**
     * @dev Retrieve a registered airline from registration list
     *      Can only be called from FlightSuretyApp contract
     *
@@ -302,6 +340,42 @@ contract FlightSuretyData {
     }
 
    /**
+    * @dev Initial funding for the insurance. Unless there are too many delayed flights
+    *      resulting in insurance payouts, the contract should be self-sustaining
+    *
+    */   
+    function fundAirline(
+        string  _name,
+        uint256 _bal, // msg.value ultimately
+        address _addr
+    )
+        external
+        payable
+        paidEnough(AIRLINE_REG_FEE)
+        checkValue(_addr, AIRLINE_REG_FEE)
+        returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
+    {
+        require(airlines[_name].isRegistered, "Airline was NOT previously registered.");
+        require(airlines[_name].wallet == _addr, "Funding Airline's address does NOT match airline's registered address");
+        require(airlines[_name].wallet == msg.sender, "Sending wallet address does NOT match airline's registered address");
+        require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to register your airline.");
+        require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to register your airline.");
+        totalVoters = totalVoters.add(1); // count of successful registrations
+        // Fund Previously Registered Airline 
+        airlines[_name].isFunded = true;
+        airlines[_name].balance = _bal; // msg.value ultimately
+        emit AirlineFundedDATA(airlines[_name].isFunded);
+        emit LoggingDATA("FS DATA fundAirline(): ", 
+            airlines[_name].name, 
+            airlines[_name].balance, 
+            airlines[_name].currTtlVotersN, 
+            FlightSuretyData.isAirlineFunded(_name),
+            contractOwner
+        );
+        return airlines[_name].isFunded;
+    }
+
+   /**
     * @dev Buy insurance for a flight
     *
     */   
@@ -335,18 +409,6 @@ contract FlightSuretyData {
     {
     }
 
-   /**
-    * @dev Initial funding for the insurance. Unless there are too many delayed flights
-    *      resulting in insurance payouts, the contract should be self-sustaining
-    *
-    */   
-    function fund(
-    )
-        public
-        payable
-    {
-    }
-
     function getFlightKey(
         address airline,
         string memory flight,
@@ -359,6 +421,13 @@ contract FlightSuretyData {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
 
+    function fund(
+    )
+        external
+        pure
+    {
+    }
+
     /**
     * @dev Fallback function for funding smart contract.
     *
@@ -366,8 +435,9 @@ contract FlightSuretyData {
     function() 
         external 
         payable 
-    {
-        fund();
+    { // was fund() which TBD different fundings vs ONE fallback
+        // fundAirline(); // Why doesn't this work?
+        this.fund();
     }
 
 

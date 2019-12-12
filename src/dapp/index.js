@@ -9,6 +9,7 @@ import './flightsurety.css';
     let result = null;
     let initLookupDispComplete = false;
     let initRegAirDispComplete = false;
+    let initFundAirDispComplete = false;
 
     let contract = new Contract('localhost', async () => {
         let opsStatusCheckCount = 0;
@@ -52,19 +53,63 @@ import './flightsurety.css';
     
 
         // REGISTER AIRLINE: User-submitted transaction
-        displayRegAirline('Airline Registration', 'Add New Airlines to the Program', initRegAirDispComplete, [ { label: 'New Airline to Register'} ]);
+        displayRegAirline('Airline Registration', "Add New Airlines to the Program - Provide Sponsoring Airline's Address", initRegAirDispComplete, [ { label: 'New Airline to Register'} ]);
         initRegAirDispComplete = true;
-        DOM.elid('reg-airline-btn').addEventListener('click', () => {
+        DOM.elid('reg-airline-btn').addEventListener('click', async () => {
             let airlineName = DOM.elid('reg-airline-name').value;
-            let airlineFunds = DOM.elid('reg-airline-funds').value;
+            // let airlineFunds = DOM.elid('reg-airline-funds').value;
             let airlineAddress = DOM.elid('reg-airline-addr').value;
+            console.log(`airlineName: ${airlineName}`);
+            // console.log(`airlineFunds: ${airlineFunds}`);
+            console.log(`airlineAddress: ${airlineAddress}`);
+            // Write transaction
+            console.log(airlineName, airlineAddress);
+            await contract.registerAirline(airlineName, airlineAddress, async (error, result) => {
+                console.log(`index.js registerAirline: result:`);
+                // console.log(result);
+                // console.log(result.receipt);
+                // console.log(result.logs);
+                console.log(`result.receipt.status: ${result.receipt.status}`);
+                if (result.receipt.status == true) {
+                    await contract.retrieveAirline(airlineName, (error, retResult) => {
+                        console.log(error, retResult, airlineName);
+                        displayRegAirline('Airline Registration', 'Add New Airlines to the Program', initRegAirDispComplete, [ { label: 'New Airline Registered', error: error, value: retResult} ]);
+                        displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: retResult} ]);
+                        console.log(`result.airIsRegd: ${retResult.airIsRegd}`);
+                    });
+                    DOM.elid('reg-airline-name').value = "";
+                    // DOM.elid('reg-airline-funds').value = "";
+                    DOM.elid('reg-airline-addr').value = "";
+                }
+            });
+        })
+    
+        // FUND AIRLINE: User-submitted transaction
+        displayFundAirline('Airline Funding', "Fund a Registered Airline", initFundAirDispComplete, [ { label: 'Fund a Registered Airline'} ]);
+        initFundAirDispComplete = true;
+        DOM.elid('fund-airline-btn').addEventListener('click', async () => {
+            let airlineName = DOM.elid('fund-airline-name').value;
+            let airlineFunds = DOM.elid('fund-airline-funds').value;
+            let airlineAddress = DOM.elid('fund-airline-addr').value;
             console.log(`airlineName: ${airlineName}`);
             console.log(`airlineFunds: ${airlineFunds}`);
             console.log(`airlineAddress: ${airlineAddress}`);
             // Write transaction
             console.log(airlineName, airlineFunds, airlineAddress);
-            contract.registerAirline(airlineName, airlineFunds, airlineAddress, (error, result) => {
-                displayRegAirline('Airline Registration', 'Add New Airlines to the Program', initRegAirDispComplete, [ { label: 'New Airline to Register', error: error, value: result} ]);
+            await contract.fundAirline(airlineName, airlineFunds, airlineAddress, async (error, result) => {
+                console.log(`index.js registerAirline: result:`);
+                console.log(`result.receipt.status: ${result.receipt.status}`);
+                if (result.receipt.status == true) {
+                    await contract.retrieveAirline(airlineName, (error, fundResult) => {
+                        console.log(error, fundResult, airlineName);
+                        displayFundAirline('Airline Funding', 'Fund a Registered Airline', initFundAirDispComplete, [ { label: 'New Airline Funded', error: error, value: fundResult} ]);
+                        displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: fundResult} ]);
+                        console.log(`result.airIsRegd: ${fundResult.airIsRegd}`);
+                    });
+                    DOM.elid('fund-airline-name').value = "";
+                    DOM.elid('fund-airline-funds').value = "";
+                    DOM.elid('fund-airline-addr').value = "";
+                }
             });
         })
     
@@ -142,8 +187,39 @@ function displayAir(title, description, initDispDone, results) {
     displayDiv.append(section);
 }
 
+// Registering Airline Section
 function displayRegAirline(title, description, initDispDone, results) {
     let displayDiv = DOM.elid("register-airline");
+    let section = DOM.section();
+    if (!initDispDone) {
+        section.appendChild(DOM.h2(title));
+        section.appendChild(DOM.h5(description));
+    } else {
+        // results.map((result) => {
+        let row = section.appendChild(DOM.div({className:'row'}));
+        row.appendChild(DOM.div({className: 'col-sm-4 field'}, results[0].label));
+        if (results.error) {
+            row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, String(results.error)));
+        } else {
+            console.log(results);
+            console.log(results.error);
+            console.log(results.value);
+            console.log(results[0].value.airName, results[0].value.airIsRegd, results[0].value.airIsFunded, results[0].value.airAddr);
+            let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
+            let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
+            let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
+            // row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `Name: ${String(results[0].value.airName)}, Reg'd: ${String(results[0].value.airIsRegd)}, Funded: ${String(results[0].value.airIsFunded)}, Addr: ${String(results[0].value.airAddr)}` ));
+            row.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        }
+        section.appendChild(row);
+        // })
+    }
+    displayDiv.append(section);
+}
+
+// Funding Airline Section
+function displayFundAirline(title, description, initDispDone, results) {
+    let displayDiv = DOM.elid("fund-airline");
     let section = DOM.section();
     if (!initDispDone) {
         section.appendChild(DOM.h2(title));

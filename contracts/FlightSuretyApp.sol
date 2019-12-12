@@ -91,6 +91,12 @@ contract FlightSuretyApp is AirlineRole {
         _;
     }
 
+    /// @dev Define a modifer that verifies the Caller
+    modifier verifyCaller (address _address) {
+        require(msg.sender == _address); 
+        _;
+    }
+
     /********************************************************************************************/
     /*                                       CONSTRUCTOR                                        */
     /********************************************************************************************/
@@ -143,31 +149,33 @@ contract FlightSuretyApp is AirlineRole {
     */   
     function registerAirline(
         string  _name,
-        uint256 _bal,
-        address _addr
+        // uint256 _bal,
+        address _addr,
+        address _sponsor
     )
         onlyAirline
+        verifyCaller(_sponsor)
         external
         payable
         returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
     {
         uint256 votes;
         require(!flightSuretyData.isAirlineRegistered(_name), "Airline is already registered.");
-        require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         // Register new airline 
         addAirline(_addr); // Add to list of airlines for Role Checking        
-        success = flightSuretyData.registerAirline(_name, _bal, _addr);
+        success = flightSuretyData.registerAirline(_name, _addr);
         // When registered, it will have 1 vote, but could retrieve actual value
         if (success) {votes = 1;} else {votes = 0;}
         // return (success, votes);
         emit AirlineRegisteredAPP(success);
         emit LoggingAPP("FS APP registerAirline(): ", 
             _name, 
-            _bal, 
+            0, 
             votes,
             // success,
             flightSuretyData.isAirlineRegistered(_name), 
-            _addr
+            _addr // _sponsor
         );
         
         return (success);
@@ -447,7 +455,7 @@ contract FlightSuretyApp is AirlineRole {
 contract FlightSuretyData {
     function registerAirline(
         string  _name,
-        uint256 _bal,
+        // uint256 _bal,
         address _addr
     )
     external
@@ -458,6 +466,14 @@ contract FlightSuretyData {
         public
         view
         returns (bool);
+
+    function fundAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
+    )
+    external
+    returns (bool);
 
     function retrieveAirline(string _name)
         external
