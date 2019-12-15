@@ -59,6 +59,7 @@ contract FlightSuretyApp is AirlineRole {
     /********************************************************************************************/
     // Production events
     event AirlineRegisteredAPP(bool _success);
+    event AirlineFundedAPP(bool _success);
 
     // Define debugging event
     event LoggingAPP(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
@@ -149,25 +150,23 @@ contract FlightSuretyApp is AirlineRole {
     */   
     function registerAirline(
         string  _name,
-        // uint256 _bal,
         address _addr,
         address _sponsor
     )
         onlyAirline
         verifyCaller(_sponsor)
         external
-        payable
+        // payable
         returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
     {
         uint256 votes;
         require(!flightSuretyData.isAirlineRegistered(_name), "Airline is already registered.");
-        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         // Register new airline 
         addAirline(_addr); // Add to list of airlines for Role Checking        
         success = flightSuretyData.registerAirline(_name, _addr);
-        // When registered, it will have 1 vote, but could retrieve actual value
-        if (success) {votes = 1;} else {votes = 0;}
-        // return (success, votes);
+        // // When registered, it will have 1 vote, but could retrieve actual value
+        // if (success) {votes = 1;} else {votes = 0;}
+        // // return (success, votes);
         emit AirlineRegisteredAPP(success);
         emit LoggingAPP("FS APP registerAirline(): ", 
             _name, 
@@ -227,6 +226,45 @@ contract FlightSuretyApp is AirlineRole {
             airTtlVoters
         );
     }
+
+   /**
+    * @dev FUND an airline previously added to the registration list
+    *
+    */   
+    function fundAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
+    )
+        // onlyAirline
+        // verifyCaller(_addr)
+        external
+        payable
+        returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
+    {
+        uint256 votes;
+        require(flightSuretyData.isAirlineRegistered(_name), "Airline is NOT registered.");
+        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        // Register new airline 
+        // addAirline(_addr); // Add to list of airlines for Role Checking        
+        success = flightSuretyData.fundAirline(_name, _bal, _addr);
+        // When registered, it will have 1 vote, but could retrieve actual value
+        if (success) {votes = 1;} else {votes = 0;}
+        // return (success, votes);
+        emit AirlineFundedAPP(success);
+        emit LoggingAPP("FS APP fundAirline(): ", 
+            _name, 
+            _bal, 
+            votes,
+            // success,
+            flightSuretyData.isAirlineFunded(_name), 
+            _addr
+        );
+        
+        return (success);
+    }
+
+
 
    /**
     * @dev Register a future flight for insuring.
@@ -474,6 +512,12 @@ contract FlightSuretyData {
     )
     external
     returns (bool);
+
+    function isAirlineFunded(string _name)
+        // external
+        public
+        view
+        returns (bool);
 
     function retrieveAirline(string _name)
         external

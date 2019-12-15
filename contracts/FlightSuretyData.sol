@@ -45,6 +45,8 @@ contract FlightSuretyData {
     // Production events
     event AirlineRegisteredDATA(bool _isRegd);
     event AirlineFundedDATA(bool _isFunded);
+    event CheckAirlineRegisteredDATA(bool _isRegd);
+    event CheckAirlineFundedDATA(bool _isFunded);
 
     // Define debugging event
     event LoggingDATA(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
@@ -221,7 +223,7 @@ contract FlightSuretyData {
         airlines[_name] = Airline ({
             name: _name,
             isRegistered: true,
-            isFunded: true, // _bal >= 10 ether ? true : false,
+            isFunded: false, // _bal >= 10 ether ? true : false,
             balance: 0,
             // isActive: airlines[_name].isRegistered && airlines[_name].isFunded,
             wallet: _addr,
@@ -282,6 +284,7 @@ contract FlightSuretyData {
             // address airAddr = airlineView.wallet;
             // uint256 airVoteCount = airlineView.currVoteCountM;
             // uint256 airTtlVoters = airlineView.currTtlVotersN;
+        emit CheckAirlineRegisteredDATA(airlineIsRegistered);
         return (airlineIsRegistered);
     }
 
@@ -290,16 +293,45 @@ contract FlightSuretyData {
     *      Can only be called from FlightSuretyApp contract
     *
     */
-    function isAirlineFunded(string _name)
+    function isAirlineFunded(string _name) // ALWAYS FALSE
         // external
         public
         view
         returns (bool airlineIsFunded)
     {
-        string memory airName = airlines[_name].name;        
+        // string memory airName = airlines[_name].name; // Unnecessary
         airlineIsFunded = airlines[_name].isFunded;
+        emit CheckAirlineFundedDATA(airlineIsFunded);
         return (airlineIsFunded);
     }
+
+    function getAirlineStatus(string _name) // ALWAYS FALSE, both 1 or 2 return values
+        // external
+        public
+        view
+        returns (
+            // bool airlineIsRegistered,
+            bool airlineIsFunded)
+    {
+        Airline memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.currVoteCountM,
+         airlineView.currTtlVotersN
+        ) = FlightSuretyData.retrieveAirline(_name);
+            string memory airName = airlineView.name;
+            // airlineIsRegistered = airlineView.isRegistered;
+            airlineIsFunded = airlineView.isFunded;
+        // emit CheckAirlineRegisteredDATA(airlineIsRegistered);
+        emit CheckAirlineFundedDATA(airlineIsFunded);
+        // return (airlineIsRegistered, airlineIsFunded);
+        return (airlineIsFunded);
+    }
+
+
 
    /**
     * @dev Retrieve a registered airline from registration list
@@ -351,19 +383,19 @@ contract FlightSuretyData {
     )
         external
         payable
-        paidEnough(AIRLINE_REG_FEE)
-        checkValue(_addr, AIRLINE_REG_FEE)
+        // paidEnough(AIRLINE_REG_FEE)
+        // checkValue(_addr, AIRLINE_REG_FEE)
         returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
     {
         require(airlines[_name].isRegistered, "Airline was NOT previously registered.");
-        require(airlines[_name].wallet == _addr, "Funding Airline's address does NOT match airline's registered address");
-        require(airlines[_name].wallet == msg.sender, "Sending wallet address does NOT match airline's registered address");
-        require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to register your airline.");
-        require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to register your airline.");
+        // require(airlines[_name].wallet == _addr, "Funding Airline's address does NOT match airline's registered address");
+        // require(airlines[_name].wallet == msg.sender, "Sending wallet address does NOT match airline's registered address");
+        // require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to register your airline.");
+        // require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to register your airline.");
         totalVoters = totalVoters.add(1); // count of successful registrations
         // Fund Previously Registered Airline 
         airlines[_name].isFunded = true;
-        airlines[_name].balance = _bal; // msg.value ultimately
+        airlines[_name].balance = airlines[_name].balance.add(_bal); // msg.value ultimately
         emit AirlineFundedDATA(airlines[_name].isFunded);
         emit LoggingDATA("FS DATA fundAirline(): ", 
             airlines[_name].name, 

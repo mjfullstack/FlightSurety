@@ -190,7 +190,6 @@ contract('Flight Surety Tests', async (accounts) => {
     // ACT
     let isReg1 = await config.flightSuretyData.isAirlineRegistered(air1reg.name);
     let gotAir1 = await config.flightSuretyApp.retrieveAirline(air1reg.name);
-    // await config.flightSuretyApp.registerAirline(air2reg.name, air2reg.bal, air2reg.addr);
     await config.flightSuretyApp.registerAirline(air2reg.name, air2reg.addr, air2reg.sponsor, {from: config.owner}); // from contract owner which matches sponsor
     let gotAir2 = await config.flightSuretyApp.retrieveAirline(air2reg.name);
     // Original function FAILS, returns FALSE when IS S/B TRUE...
@@ -226,8 +225,8 @@ contract('Flight Surety Tests', async (accounts) => {
     assert.equal(gotAir1.airTtlVoters.toNumber(), air1reg.ttlVoters, "APP can't retrieve 1st airline TOTAL VOTERS via retrieveAirline()");
     assert.equal(gotAir2.airName, air2reg.name, "APP can't retrieve 2nd airline NAME via retrieveAirline()");
     assert.equal(gotAir2.airIsRegd, true, "APP can't retrieve 2nd airline isREGISTERED via retrieveAirline()");
-    assert.equal(gotAir2.airIsFunded, true, "APP can't retrieve 2nd airline isFUNDED via retrieveAirline()");
-    // assert.equal(gotAir2.airBal.toNumber(), air2reg.bal, "APP can't retrieve 2nd airline BALANCE via retrieveAirline()");
+    assert.equal(gotAir2.airIsFunded, false, "APP can't retrieve 2nd airline isFUNDED via retrieveAirline()");
+    assert.equal(gotAir2.airBal.toNumber(), 0, "APP can't retrieve 2nd airline BALANCE via retrieveAirline()");
     assert.equal(gotAir2.airAddr, air2reg.addr, "APP can't retrieve 2nd airline ADDRESS via retrieveAirline()");
     assert.equal(gotAir2.airVoteCount.toNumber(), air2reg.votes, "APP can't retrieve 2nd airline VOTE COUNT via retrieveAirline()");
     assert.equal(gotAir2.airTtlVoters.toNumber(), air2reg.ttlVoters, "APP can't retrieve 2nd airline TOTAL VOTERS via retrieveAirline()");
@@ -310,21 +309,168 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
     assert.equal(isReg4, true, "APP contract could not register FOURTH airline via registerAirline()");
     assert.equal(gotAir3.airName, air3reg.name, "APP can't retrieve 3rd airline NAME via retrieveAirline()");
     assert.equal(gotAir3.airIsRegd, true, "APP can't retrieve 3rd airline isREGISTERED via retrieveAirline()");
-    assert.equal(gotAir3.airIsFunded, true, "APP can't retrieve 3rd airline isFUNDED via retrieveAirline()");
-    // assert.equal(gotAir3.airBal.toNumber(), air3reg.bal, "APP can't retrieve 3rd airline BALANCE via retrieveAirline()");
+    assert.equal(gotAir3.airIsFunded, false, "APP can't retrieve 3rd airline isFUNDED via retrieveAirline()");
+    assert.equal(gotAir3.airBal.toNumber(), 0, "APP can't retrieve 3rd airline BALANCE via retrieveAirline()");
     assert.equal(gotAir3.airAddr, air3reg.addr, "APP can't retrieve 3rd airline ADDRESS via retrieveAirline()");
     assert.equal(gotAir3.airVoteCount.toNumber(), air3reg.votes, "APP can't retrieve 3rd airline VOTE COUNT via retrieveAirline()");
     assert.equal(gotAir3.airTtlVoters.toNumber(), air3reg.ttlVoters, "APP can't retrieve 3rd airline TOTAL VOTERS via retrieveAirline()");
     assert.equal(gotAir4.airName, air4reg.name, "APP can't retrieve 4th airline NAME via retrieveAirline()");
     assert.equal(gotAir4.airIsRegd, true, "APP can't retrieve 4th airline isREGISTERED via retrieveAirline()");
-    assert.equal(gotAir4.airIsFunded, true, "APP can't retrieve 4th airline isFUNDED via retrieveAirline()");
-    // assert.equal(gotAir4.airBal.toNumber(), air4reg.bal, "APP can't retrieve 4th airline BALANCE via retrieveAirline()");
+    assert.equal(gotAir4.airIsFunded, false, "APP can't retrieve 4th airline isFUNDED via retrieveAirline()");
+    assert.equal(gotAir4.airBal.toNumber(), 0, "APP can't retrieve 4th airline BALANCE via retrieveAirline()");
     assert.equal(gotAir4.airAddr, air4reg.addr, "APP can't retrieve 4th airline ADDRESS via retrieveAirline()");
     assert.equal(gotAir4.airVoteCount.toNumber(), air4reg.votes, "APP can't retrieve 4th airline VOTE COUNT via retrieveAirline()");
     assert.equal(gotAir4.airTtlVoters.toNumber(), air4reg.ttlVoters, "APP can't retrieve 4th airline TOTAL VOTERS via retrieveAirline()");
     assert.equal(eventEmittedDATA_2, true, 'Invalid DATA event emitted')        
     assert.equal(eventEmittedAPP_2, true, 'Invalid APP event emitted')        
     // assert.equal(eventEmittedAPP_2, false, 'Invalid APP event emitted'); // JUST To get the Events Emitted to print...
+});
+
+it('Can FUND an airline via the APP Contract...', async () => {
+    
+    // ARRANGE
+    let air1reg = {
+        name: 'Uno Air', // This first airline created in constructor per project rubic
+        bal: 10, // web3.toWei("10", "ether"),
+        addr: accounts[1],
+        votes: 1,
+        ttlVoters: 1,
+        sponsor: config.owner
+    }
+
+    let air2reg = {
+        name: 'Dosequis Air',
+        bal: 10, // web3.toWei("10", "ether"),
+        addr: accounts[2],
+        votes: 1,
+        ttlVoters: 2,
+        sponsor: config.owner
+    }
+
+    let air3reg = {
+        name: 'Trifecta Air',
+        bal: 10, // web3.toWei("10", "ether"),
+        addr: accounts[3],
+        votes: 1,
+        ttlVoters: 3,
+        sponsor: accounts[1]
+    }
+
+    let air4reg = {
+        name: 'Quatro King Air',
+        bal: 10, // web3.toWei("10", "ether"),
+        addr: accounts[4],
+        votes: 1,
+        ttlVoters: 4,
+        sponsor: accounts[2]
+    }
+
+    console.log("BEFORE...")
+    console.log(`air1reg.bal: ${air1reg.bal}`);
+    console.log(`air2reg.bal: ${air2reg.bal}`);
+    console.log(`air3reg.bal: ${air3reg.bal}`);
+    console.log(`air4reg.bal: ${air4reg.bal}`);
+    // let isReg2 = gotAir2[1]; // struct Airline.isRegistered
+
+    // 2ND effort - Both isAirlineFunded, getAirlineStatus with 1 or 2 return values
+    // are ALWAYS FALSE except for Uno Air in constructor!
+    // let isFund1 = await config.flightSuretyData.isAirlineFunded(air1reg.name);
+    // let isFund2 = await config.flightSuretyData.isAirlineFunded(air2reg.name);
+    // let isFund3 = await config.flightSuretyData.isAirlineFunded(air3reg.name);
+    // let isFund4 = await config.flightSuretyData.isAirlineFunded(air4reg.name);
+    // let isGetStatus1 = await config.flightSuretyData.getAirlineStatus(air1reg.name);
+    // let isGetStatus2 = await config.flightSuretyData.getAirlineStatus(air2reg.name);
+    // let isGetStatus3 = await config.flightSuretyData.getAirlineStatus(air3reg.name);
+    // let isGetStatus4 = await config.flightSuretyData.getAirlineStatus(air4reg.name);
+    // console.log(isGetStatus1);
+    // console.log(isGetStatus2);
+    // console.log(isGetStatus3);
+    // console.log(isGetStatus4);
+    // console.log(`isGetStatus1.airlineIsFunded: ${isGetStatus1.airlineIsFunded}`);
+    // console.log(`isGetStatus2.airlineIsFunded: ${isGetStatus2.airlineIsFunded}`);
+    // console.log(`isGetStatus3.airlineIsFunded: ${isGetStatus3.airlineIsFunded}`);
+    // console.log(`isGetStatus4.airlineIsFunded: ${isGetStatus4.airlineIsFunded}`);
+    // console.log(`isGetStatus1.airlineIsRegistered: ${isGetStatus1.airlineIsRegistered}`);
+    // console.log(`isGetStatus2.airlineIsRegistered: ${isGetStatus2.airlineIsRegistered}`);
+    // console.log(`isGetStatus3.airlineIsRegistered: ${isGetStatus3.airlineIsRegistered}`);
+    // console.log(`isGetStatus4.airlineIsRegistered: ${isGetStatus4.airlineIsRegistered}`);
+    // console.log(`isGetStatus1: ${isGetStatus1}`);
+    // console.log(`isGetStatus2 ${isGetStatus2}`);
+    // console.log(`isGetStatus3 ${isGetStatus3}`);
+    // console.log(`isGetStatus4 ${isGetStatus4}`);
+    let gotAir1 = await config.flightSuretyApp.retrieveAirline(air1reg.name);
+    let gotAir2 = await config.flightSuretyApp.retrieveAirline(air2reg.name);
+    let gotAir3 = await config.flightSuretyApp.retrieveAirline(air3reg.name);
+    let gotAir4 = await config.flightSuretyApp.retrieveAirline(air4reg.name);
+    let isFund1 = await config.flightSuretyData.isAirlineFunded(air1reg.name);
+    let isFund2 = gotAir2.airIsFunded; // struct Airline.isRegistered
+    let isFund3 = gotAir3.airIsFunded; // struct Airline.isRegistered
+    let isFund4 = gotAir4.airIsFunded; // struct Airline.isRegistered
+    console.log(`isFund1: ${isFund1}`);
+    console.log(`isFund2: ${isFund2}`);
+    console.log(`isFund3: ${isFund3}`);
+    console.log(`isFund4: ${isFund4}`);
+    console.log(`gotAir1.airBal.toNumber(): ${gotAir1.airBal.toNumber()}`);
+    console.log(`gotAir2.airBal.toNumber(): ${gotAir2.airBal.toNumber()}`);
+    console.log(`gotAir3.airBal.toNumber(): ${gotAir3.airBal.toNumber()}`);
+    console.log(`gotAir4.airBal.toNumber(): ${gotAir4.airBal.toNumber()}`);
+
+    // ACT
+    await config.flightSuretyApp.fundAirline(air2reg.name, air2reg.bal, air2reg.addr, {from: air2reg.addr, value: air2reg.bal});
+    await config.flightSuretyApp.fundAirline(air3reg.name, air3reg.bal, air3reg.addr, {from: air3reg.addr, value: air3reg.bal});
+    await config.flightSuretyApp.fundAirline(air4reg.name, air4reg.bal, air4reg.addr, {from: air4reg.addr, value: air4reg.bal});
+    // isFund1 = await config.flightSuretyData.isAirlineFunded(air1reg.name);
+    // isFund2 = await config.flightSuretyData.isAirlineFunded(air2reg.name);
+    // isFund3 = await config.flightSuretyData.isAirlineFunded(air3reg.name);
+    // isFund4 = await config.flightSuretyData.isAirlineFunded(air4reg.name);
+    // isGetStatus1 = await config.flightSuretyData.getAirlineStatus(air1reg.name);
+    // isGetStatus2 = await config.flightSuretyData.getAirlineStatus(air2reg.name);
+    // isGetStatus3 = await config.flightSuretyData.getAirlineStatus(air3reg.name);
+    // isGetStatus4 = await config.flightSuretyData.getAirlineStatus(air4reg.name);
+    // console.log(isGetStatus1);
+    // console.log(isGetStatus2);
+    // console.log(isGetStatus3);
+    // console.log(isGetStatus4);
+    // console.log(`isGetStatus1.airlineIsFunded: ${isGetStatus1.airlineIsFunded}`);
+    // console.log(`isGetStatus2.airlineIsFunded: ${isGetStatus2.airlineIsFunded}`);
+    // console.log(`isGetStatus3.airlineIsFunded: ${isGetStatus3.airlineIsFunded}`);
+    // console.log(`isGetStatus4.airlineIsFunded: ${isGetStatus4.airlineIsFunded}`);
+    // console.log(`isGetStatus1.airlineIsRegistered: ${isGetStatus1.airlineIsRegistered}`);
+    // console.log(`isGetStatus2.airlineIsRegistered: ${isGetStatus2.airlineIsRegistered}`);
+    // console.log(`isGetStatus3.airlineIsRegistered: ${isGetStatus3.airlineIsRegistered}`);
+    // console.log(`isGetStatus4.airlineIsRegistered: ${isGetStatus4.airlineIsRegistered}`);
+    // console.log(`isGetStatus1: ${isGetStatus1}`);
+    // console.log(`isGetStatus2 ${isGetStatus2}`);
+    // console.log(`isGetStatus3 ${isGetStatus3}`);
+    // console.log(`isGetStatus4 ${isGetStatus4}`);
+    gotAir1 = await config.flightSuretyApp.retrieveAirline(air1reg.name);
+    gotAir2 = await config.flightSuretyApp.retrieveAirline(air2reg.name);
+    gotAir3 = await config.flightSuretyApp.retrieveAirline(air3reg.name);
+    gotAir4 = await config.flightSuretyApp.retrieveAirline(air4reg.name);
+    isFund1 = await config.flightSuretyData.isAirlineFunded(air1reg.name);
+    isFund2 = gotAir2.airIsFunded; // struct Airline.isRegistered
+    isFund3 = gotAir3.airIsFunded; // struct Airline.isRegistered
+    isFund4 = gotAir4.airIsFunded; // struct Airline.isRegistered
+    console.log("AFTER...")
+    console.log(`isFund1: ${isFund1}`);
+    console.log(`isFund2: ${isFund2}`);
+    console.log(`isFund3: ${isFund3}`);
+    console.log(`isFund4: ${isFund4}`);
+    console.log(`gotAir1.airBal.toNumber(): ${gotAir1.airBal.toNumber()}`);
+    console.log(`gotAir2.airBal.toNumber(): ${gotAir2.airBal.toNumber()}`);
+    console.log(`gotAir3.airBal.toNumber(): ${gotAir3.airBal.toNumber()}`);
+    console.log(`gotAir4.airBal.toNumber(): ${gotAir4.airBal.toNumber()}`);
+
+    // ASSERT
+    assert.equal(isFund1, true, "APP contract could not FUND FIRST airline via constructor");
+    assert.equal(isFund2, true, "APP contract could not FUND 2nd airline via fundAirline()");
+    assert.equal(isFund3, true, "APP contract could not FUND THIRD airline via fundAirline");
+    assert.equal(isFund4, true, "APP contract could not FUND FOURTH airline via fundAirline()");
+    assert.equal(gotAir1.airBal.toNumber(), air1reg.bal, "APP can't retrieve 1st airline BALANCE via retrieveAirline()");
+    assert.equal(gotAir2.airBal.toNumber(), air2reg.bal, "APP can't retrieve 2nd airline BALANCE via retrieveAirline()");
+    assert.equal(gotAir3.airBal.toNumber(), air3reg.bal, "APP can't retrieve 3rd airline BALANCE via retrieveAirline()");
+    assert.equal(gotAir4.airBal.toNumber(), air4reg.bal, "APP can't retrieve 4th airline BALANCE via retrieveAirline()");
+
 });
 
   /****************************************************************************************/

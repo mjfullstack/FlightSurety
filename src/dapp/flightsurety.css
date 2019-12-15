@@ -12,9 +12,9 @@ body {
     padding: 40px;
 }
 
-.top-20 {
+/* .top-20 {
     margin-top: 20px;
-}
+} */
 
 h5 {
     color: #999999;
@@ -32,12 +32,21 @@ h5 {
 .field-value {
     color: #0e7fa8;
     font-size: 18px;
+    /* text-align: right; */
 }
 
 label.form {
     font-size: 14px;
-    margin-right: 20px;
+    /* margin-right: 20px; */
 }
 input {
     margin-right: 30px;
+}
+
+.col .col-sm-4 .col-sm-8 {
+    border: 2px red;
+}
+
+.multi-section-title {
+    margin-top: 20px;
 }
