@@ -83,7 +83,7 @@ export default class Contract {
             }
             console.log('getMetaskAccountID:', res);
             console.log(res);
-            this.metamaskAccountID = res[0];
+            self.metamaskAccountID = res[0];
             console.log('this.metamaskAccountID:', res[0]);
         })
     }
@@ -114,30 +114,21 @@ export default class Contract {
                 return;
             }
 
-        // let accts;
-        // const getAccount = async () => {
-        //     accts = await web3.eth.getAccounts();
-        //     // console.log(accts); // STILL only ONE not an array
-        //  };
-        //  getAccount();
-        //  console.log(accts); // undefined
-
-
             this.owner = accts[0];
             console.log(`this.owner = ${this.owner}`);
 
-            let counter = 1;
-            let eachMax = 5;
+            // let counter = 1;
+            // let eachMax = 5;
             
-            while(this.airlines.length < eachMax) {
-                console.log(`airlines[${counter}] = acct: ${accts[counter]}`);
-                this.airlines.push(accts[counter++]);
-            }
+            // while(this.airlines.length < eachMax) {
+            //     console.log(`airlines[${counter}] = acct: ${accts[counter]}`);
+            //     this.airlines.push(accts[counter++]);
+            // }
 
-            while(this.passengers.length < eachMax) {
-                console.log(`passengers[${counter - eachMax}] = acct: ${accts[counter]}`);
-                this.passengers.push(accts[counter++]);
-            }
+            // while(this.passengers.length < eachMax) {
+            //     console.log(`passengers[${counter - eachMax}] = acct: ${accts[counter]}`);
+            //     this.passengers.push(accts[counter++]);
+            // }
 
             callback();
         });
@@ -149,19 +140,14 @@ export default class Contract {
         console.log(self.flightSuretyApp);
         console.log("isOperational: self.contracts.FlightSuretyApp");
         console.log(self.contracts.FlightSuretyApp);
-        // self.flightSuretyApp.methods
-        //     .isOperational()
-        //     .call({ from: self.owner}, callback);
+        await self.getMetaskAccountID();
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
             return instance.isOperational();
-                // App.upc
-                // );
             }).then(function(result) {
-                // $("#ftc-item").text(`plantItem, ${result}`);
-                console.log(`isOperational: result:`); // WORKED!!
+                console.log(`isOperational: result:`);
                 console.log(result);
-                // App.reflectBlockchainInApp(App.upc);
-                callback(null, result);
+
+                callback(null, result, self.metamaskAccountID);
             })
             .catch(function(err) {
                 console.log(err.message);
@@ -182,22 +168,41 @@ export default class Contract {
             });
     }
 
-    async retrieveAirline(airName, callback) {
+    async retrieveOneAirline(airName, callback) {
         let self = this;
-        // console.log("retrieveAirline: self.flightSuretyApp");
-        // console.log(self.flightSuretyApp);
-        // console.log("retrieveAirline: self.contracts.FlightSuretyApp");
-        // console.log(self.contracts.FlightSuretyApp);
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
             return instance.retrieveAirline(airName);
             }).then(function(result) {
-                // console.log(`retrieveAirline: result:`);
-                // console.log(result);
                 callback(null, result);
             })
             .catch(function(err) {
                 console.log(err.message);
             });
+    }
+
+    async retrieveAllAirlines(callback) {
+        let self = this;
+        let testAirlineNames = [];
+        await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
+            return instance.getAirlineCount();
+        }).then( async function(airlineCount) {
+            console.log(`airlineCount ${airlineCount}`);
+            for (let i=0; i<airlineCount; i++) {
+                await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
+                    return instance.getAirlineName(i);
+                }).then ( (testAirlineName) => {
+                    console.log(`Retrieve Airline NAME... APP.getAirlineName(${i}): testAirlineName: ${testAirlineName}`);
+                    testAirlineNames.push(testAirlineName);
+                    console.log(`Display testAirlineNames ARRAY[${i}]: ${testAirlineNames[i]} `);
+                })
+            }
+            console.log(`testAirlineNames ARRAY...`);
+            console.log(testAirlineNames);
+            callback(testAirlineNames);
+        })
+        .catch(function(err) {
+            console.log(err.message);
+        });
     }
 
     async registerAirline(_name, _addr, _sponsor, callback) {

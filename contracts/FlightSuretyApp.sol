@@ -171,7 +171,8 @@ contract FlightSuretyApp is AirlineRole {
         emit LoggingAPP("FS APP registerAirline(): ", 
             _name, 
             0, 
-            votes,
+            // votes,
+            flightSuretyData.getAirlineCount(), // Gets Correct Number, while called from test doesn't!
             // success,
             flightSuretyData.isAirlineRegistered(_name), 
             _addr // _sponsor
@@ -215,6 +216,7 @@ contract FlightSuretyApp is AirlineRole {
             airAddr = airlineView.wallet;
             airVoteCount = airlineView.currVoteCountM;
             airTtlVoters = airlineView.currTtlVotersN;
+            // airTtlVoters = flightSuretyData.getAirlineCount();
 
         return (
             airName,
@@ -264,6 +266,23 @@ contract FlightSuretyApp is AirlineRole {
         return (success);
     }
 
+    function getAirlineCount()
+        public
+        view
+        returns(uint256 _count)
+    {
+        _count = flightSuretyData.getAirlineCount();
+        return _count;
+    }
+
+    function getAirlineName(uint256 _num)
+        public
+        view
+        returns(string _name)
+    {
+        _name = flightSuretyData.getAirlineName(_num);
+        return _name;
+    }
 
 
    /**
@@ -531,5 +550,15 @@ contract FlightSuretyData {
             uint256 airVoteCount,
             uint256 airTtlVoters
         );
+
+    function getAirlineCount()
+        public
+        view
+        returns(uint256 _count);
+
+    function getAirlineName(uint256 _num)
+        public
+        view
+        returns(string _name);
 
 }

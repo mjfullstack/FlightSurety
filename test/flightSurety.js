@@ -323,7 +323,7 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
     assert.equal(gotAir4.airTtlVoters.toNumber(), air4reg.ttlVoters, "APP can't retrieve 4th airline TOTAL VOTERS via retrieveAirline()");
     assert.equal(eventEmittedDATA_2, true, 'Invalid DATA event emitted')        
     assert.equal(eventEmittedAPP_2, true, 'Invalid APP event emitted')        
-    // assert.equal(eventEmittedAPP_2, false, 'Invalid APP event emitted'); // JUST To get the Events Emitted to print...
+    // assert.equal(eventEmittedAPP_2, false, 'APP contract JUST FAILING ON PURPOSE TO GET EVENTS LOGGING...'); // JUST To get the Events Emitted to print...
 });
 
 it('Can FUND an airline via the APP Contract...', async () => {
@@ -451,7 +451,13 @@ it('Can FUND an airline via the APP Contract...', async () => {
     isFund2 = gotAir2.airIsFunded; // struct Airline.isRegistered
     isFund3 = gotAir3.airIsFunded; // struct Airline.isRegistered
     isFund4 = gotAir4.airIsFunded; // struct Airline.isRegistered
+    // let try2namesLen = gotAir2.airTtlVoters.toNumber();
+    // let try3namesLen = gotAir3.airTtlVoters.toNumber();
+    // let try4namesLen = gotAir4.airTtlVoters.toNumber();
     console.log("AFTER...")
+    // console.log(`try2namesLen: ${try2namesLen}`)
+    // console.log(`try3namesLen: ${try3namesLen}`)
+    // console.log(`try4namesLen: ${try4namesLen}`)
     console.log(`isFund1: ${isFund1}`);
     console.log(`isFund2: ${isFund2}`);
     console.log(`isFund3: ${isFund3}`);
@@ -460,6 +466,33 @@ it('Can FUND an airline via the APP Contract...', async () => {
     console.log(`gotAir2.airBal.toNumber(): ${gotAir2.airBal.toNumber()}`);
     console.log(`gotAir3.airBal.toNumber(): ${gotAir3.airBal.toNumber()}`);
     console.log(`gotAir4.airBal.toNumber(): ${gotAir4.airBal.toNumber()}`);
+    let testAirlineCount = await config.flightSuretyApp.getAirlineCount();
+    let myAirlineCount = testAirlineCount.toNumber(); // ^^^ DATA Only gets 1, S/B 4; APP gets 4 CORRECTLY
+    console.log(`END of FUNDING, now get COUNT test... APP.getAirlineCount(): testAirlineCount`);
+    console.log(testAirlineCount);
+    console.log(`myAirlineCount`);
+    console.log(myAirlineCount);
+    let testAirlineNames = [];
+    
+    for (let i=0; i<myAirlineCount; i++) {
+    // for (let i=0; i<try4namesLen; i++) {
+        testAirlineName = await config.flightSuretyApp.getAirlineName(i);
+        console.log(`END of test, now get NAME... APP.getAirlineName(${i}): testAirlineName`);
+        console.log(testAirlineName);
+        testAirlineNames.push(testAirlineName);
+        console.log(`END of test, now get testAirlineNames ARRAY[${i}]... `);
+        console.log(testAirlineNames[i]);
+    }
+    
+    // console.log(`END of test, now get NAME 3... DATA.getAirlineName(3): testAirlineName`);
+    // let testAirlineName = await config.flightSuretyData.getAirlineName(3);
+    // console.log(testAirlineName);
+
+    // let testAirNamesList = await config.flightSuretyData.getAirlineList();
+    // console.log(`END of FUNDING test... DATA.getAirlineList(): testAirNamesList`);
+    // console.log(testAirNamesList);
+    // console.log(`String(testAirNamesList)`);
+    // console.log(String(testAirNamesList)); // [object object]
 
     // ASSERT
     assert.equal(isFund1, true, "APP contract could not FUND FIRST airline via constructor");
@@ -470,6 +503,7 @@ it('Can FUND an airline via the APP Contract...', async () => {
     assert.equal(gotAir2.airBal.toNumber(), air2reg.bal, "APP can't retrieve 2nd airline BALANCE via retrieveAirline()");
     assert.equal(gotAir3.airBal.toNumber(), air3reg.bal, "APP can't retrieve 3rd airline BALANCE via retrieveAirline()");
     assert.equal(gotAir4.airBal.toNumber(), air4reg.bal, "APP can't retrieve 4th airline BALANCE via retrieveAirline()");
+    // assert.equal(isFund4, false, "APP contract JUST FAILING ON PURPOSE TO GET EVENTS LOGGING...");
 
 });
 

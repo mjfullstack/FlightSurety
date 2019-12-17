@@ -16,40 +16,40 @@ import './flightsurety.css';
         let opsStatusCheckCount = 0;
 
         // Read Ops Status at Start-Up and...
-        await contract.isOperational((error, result) => {
+        await contract.isOperational((error, result, currentAcct) => {
             console.log(error,result);
-            displayOps('Operational Status', 'Check if contract is operational', opsStatusCheckCount, [ { label: 'Operational Status', error: error, value: result} ]);
+            console.log(`currentAcct: ${currentAcct}`)
+            displayOps('Operational Status', 'Display current account and check contract operational status', opsStatusCheckCount, currentAcct, [ { label: 'Operational Status', error: error, value: result} ]);
+            opsStatusCheckCount += 1;
         });
         // ALSO read Ops Status when clicked to check it...
         DOM.elid('check-status').addEventListener('click', () => {
+            checkOpStatus(opsStatusCheckCount);
             opsStatusCheckCount += 1;
-            contract.isOperational((error, result) => {
-                console.log(error, result, opsStatusCheckCount);
-                displayOps('Operational Status', 'Check if contract is operational, # ', opsStatusCheckCount, [ { label: 'Operational Status', error: error, value: result} ]);
-            });                
         });
     
         // Retrieve Airline
-        await contract.retrieveAirline("Uno Air", (error, result) => {
-            console.log(error,result);
-            // let resArray = [result[0], result[1], result[2], result[3], result[4] ];
-            console.log(result.airName, result.airIsRegd, result.airIsFunded, result.airAddr);
-            displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
-            initLookupDispComplete = true;
-            console.log(`result.airIsRegd: ${result.airIsRegd}`);
-        });
+        getAllAirlines();
         // ALSO LOOKUP an Airline Status when clicked to check it...
         DOM.elid('lookup-airline').addEventListener('click', () => {
             let _name = DOM.elid('lookup-airline-name').value;
-            console.log("_name: ", _name);
-            contract.retrieveAirline(_name, (error, result) => {
-                console.log(error, result, _name);
-                displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
-                console.log(`result.airIsRegd: ${result.airIsRegd}`);
-                if (result.airIsRegd) {
-                    DOM.elid('lookup-airline-name').value = "";
-                }
-            });                
+            // If a name was entered, display that SINGLE airline
+            if (_name) {
+                console.log("NOT null _name: ", _name);
+                contract.retrieveOneAirline(_name, (error, result) => {
+                    console.log(error, result, _name);
+                    displayAirClear('Airline List', 'Retrieve Airline Details', initLookupDispComplete, 'Airline Status')
+                    displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
+                    console.log(`result.airIsRegd: ${result.airIsRegd}`);
+                    if (result.airIsRegd) {
+                        DOM.elid('lookup-airline-name').value = "";
+                    }
+                });
+            } else { // Otherwise, a null name retrieves ALL airlines
+                console.log("NULL _name: ", _name);
+                getAllAirlines();
+            }
+            
         });
     
 
@@ -58,30 +58,24 @@ import './flightsurety.css';
         initRegAirDispComplete = true;
         DOM.elid('reg-airline-btn').addEventListener('click', async () => {
             let airlineName = DOM.elid('reg-airline-name').value;
-            // let airlineFunds = DOM.elid('reg-airline-funds').value;
             let airlineAddress = DOM.elid('reg-airline-addr').value;
             let airlineSponsor = DOM.elid('reg-sponsor-addr').value;
 
             console.log(`airlineName: ${airlineName}`);
-            // console.log(`airlineFunds: ${airlineFunds}`);
             console.log(`airlineAddress: ${airlineAddress}`);
             // Write transaction
             console.log(airlineName, airlineAddress);
             await contract.registerAirline(airlineName, airlineAddress, airlineSponsor, async (error, result) => {
                 console.log(`index.js registerAirline: result:`);
-                // console.log(result);
-                // console.log(result.receipt);
-                // console.log(result.logs);
                 console.log(`result.receipt.status: ${result.receipt.status}`);
                 if (result.receipt.status == true) {
-                    await contract.retrieveAirline(airlineName, (error, retResult) => {
+                    await contract.retrieveOneAirline(airlineName, (error, retResult) => {
                         console.log(error, retResult, airlineName);
                         displayRegAirline('Airline Registration', 'Add New Airlines to the Program', initRegAirDispComplete, [ { label: 'New Airline Registered', error: error, value: retResult} ]);
-                        displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: retResult} ]);
+                        getAllAirlines();
                         console.log(`result.airIsRegd: ${retResult.airIsRegd}`);
                     });
                     DOM.elid('reg-airline-name').value = "";
-                    // DOM.elid('reg-airline-funds').value = "";
                     DOM.elid('reg-airline-addr').value = "";
                     DOM.elid('reg-sponsor-addr').value = "";
                 }
@@ -92,6 +86,8 @@ import './flightsurety.css';
         displayFundAirline('Airline Funding', "Fund a Registered Airline", initFundAirDispComplete, [ { label: 'Fund a Registered Airline'} ]);
         initFundAirDispComplete = true;
         DOM.elid('fund-airline-btn').addEventListener('click', async () => {
+            checkOpStatus(opsStatusCheckCount);
+            opsStatusCheckCount += 1;
             let airlineName = DOM.elid('fund-airline-name').value;
             let airlineFunds = DOM.elid('fund-airline-funds').value;
             let airlineAddress = DOM.elid('fund-airline-addr').value;
@@ -104,10 +100,10 @@ import './flightsurety.css';
                 console.log(`index.js fundAirline: result:`);
                 console.log(`result.receipt.status: ${result.receipt.status}`);
                 if (result.receipt.status == true) {
-                    await contract.retrieveAirline(airlineName, (error, fundResult) => {
+                    await contract.retrieveOneAirline(airlineName, (error, fundResult) => {
                         console.log(error, fundResult, airlineName);
                         displayFundAirline('Airline Funding', 'Fund a Registered Airline', initFundAirDispComplete, [ { label: 'New Airline Funded', error: error, value: fundResult} ]);
-                        displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: fundResult} ]);
+                        getAllAirlines();
                         console.log(`result.airIsRegd: ${fundResult.airIsRegd}`);
                     });
                     DOM.elid('fund-airline-name').value = "";
@@ -131,10 +127,12 @@ import './flightsurety.css';
                 console.log(`index.js voteAirline: result:`);
                 console.log(`result.receipt.status: ${result.receipt.status}`);
                 if (result.receipt.status == true) {
-                    await contract.retrieveAirline(airlineName, (error, voteResult) => {
+                    await contract.retrieveOneAirline(airlineName, (error, voteResult) => {
                         console.log(error, voteResult, airlineName);
                         displayVoteAirline('Airline Voting', 'Vote for a Sponsored Airline', initVoteAirDispComplete, [ { label: 'Voter Approved Airline', error: error, value: voteResult} ]);
-                        displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: voteResult} ]);
+                        // displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: voteResult} ]);
+                        // displayAirClear('Airline List', 'Retrieve Airline Details', initLookupDispComplete, 'Airline Status')
+                        getAllAirlines();
                         console.log(`result.airIsRegd: ${voteResult.airIsRegd}`);
                     });
                     DOM.elid('vote-airline-name').value = "";
@@ -155,13 +153,43 @@ import './flightsurety.css';
     
     });
     
+    // Create function so it can be called from multiple locations in this contract
+    async function checkOpStatus(_opsStatusCheckCount) {
+        contract.isOperational((error, result, currentAcct) => {
+            console.log(error, result, _opsStatusCheckCount);
+            console.log(`currentAcct: btn ${currentAcct}`)
+            displayOps('Operational Status', 'Display current account and check contract operational status, # ', _opsStatusCheckCount, currentAcct, [ { label: 'Operational Status', error: error, value: result} ]);
+        });                
+    }
 
+    async function getAllAirlines() {
+        await contract.retrieveAllAirlines(async (airNamesArray) => {
+            console.log(`airNamesArray: ${airNamesArray}`);
+            displayAirClear(initLookupDispComplete, 'Airline Status')
+            for (let i=0; i<airNamesArray.length; i++ ) {
+                await contract.retrieveOneAirline(airNamesArray[i], (error, result) => {
+                    if(error) {
+                        console.log(error.message);
+                    } else {
+                        console.log(result);
+                        console.log(result.airName, result.airIsRegd, result.airIsFunded, result.airAddr);
+                        displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
+                        initLookupDispComplete = true;
+                        console.log(`result.airIsRegd: ${result.airIsRegd}`);
+                    }
+                });
+            }
+        });
+    }
 })();
 
 
-function displayOps(title, description, count, results) {
+
+function displayOps(title, description, count, currAcct, results) {
     let displayDiv = DOM.elid("display-ops");
     let section = DOM.section();
+    console.log(`count: ${count}`)
+    console.log(`currAcct: ${currAcct}`)
     if ( count == 0) {
         section.appendChild(DOM.h2({id: "ops-title"}, title));
         section.appendChild(DOM.h5({id: "ops-desc"}, description));
@@ -173,16 +201,13 @@ function displayOps(title, description, count, results) {
         opsTitle.parentNode.removeChild(opsTitle);
         opsDesc.parentNode.removeChild(opsDesc);
         opsResRow.parentNode.removeChild(opsResRow);
-        // Doing this via the row that contains these elements
-        // let opsResLabel = DOM.elid("ops-res-label");
-        // let opsResValue = DOM.elid("ops-res-value");
-        // opsResLabel.parentNode.removeChild(opsResLabel);
-        // opsResValue.parentNode.removeChild(opsResValue);
         section.appendChild(DOM.h2({id: "ops-title"}, title));
         section.appendChild(DOM.h5({id: "ops-desc"}, description, String(count)));
     }
+    let row = section.appendChild(DOM.div({id: 'ops-res-row', className:'row'}));
+    row.appendChild(DOM.div({id: 'ops-res-label', className: 'col col-sm-4 field'}, "Current Account: "));
+    row.appendChild(DOM.div({id: 'ops-res-value', className: 'col col-sm-8 field-value'}, String(currAcct)));
     results.map((result) => {
-        let row = section.appendChild(DOM.div({id: 'ops-res-row', className:'row'}));
         row.appendChild(DOM.div({id: 'ops-res-label', className: 'col col-sm-4 field'}, result.label));
         row.appendChild(DOM.div({id: 'ops-res-value', className: 'col col-sm-8 field-value'}, result.error ? String(result.error) : String(result.value)));
         section.appendChild(row);
@@ -200,14 +225,13 @@ function displayAir(title, description, initDispDone, results) {
     }
     // results.map((result) => {
     let displayListDiv = DOM.elid("airline-list-display");
-    if (!initDispDone) {
-        displayListDiv.appendChild(DOM.div({className: 'col col-lg-2 col-md-4 col-sm-3 col-xs-12 field'}, 'Airline Count'));
-        displayListDiv.appendChild(DOM.div({className: 'col col-lg-7 col-md-4 col-sm-3 col-xs-12 field'}, results[0].label));
-        displayListDiv.appendChild(DOM.div({className: 'col col-lg-3 col-md-4 col-sm-3 col-xs-12 field'}, 'Voting Status'));
-    }
-    displayListDiv.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, results[0].label));
+    let displayListRow = DOM.elid('airline-list-row');
+    // Count of total voters when this airline was registered serves as airline index number
+    let ttlVoters = String(results[0].value.airTtlVoters);
+    console.log(`ttlVoters ${ttlVoters}`);
+    displayListRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, ttlVoters));
     if (results.error) {
-        displayListDiv.appendChild(DOM.div({className: 'col col-lg-9 col-md-9 col-sm-6 col-xs-12 field-value'}, String(results.error)));
+        displayListRow.appendChild(DOM.div({className: 'col col-lg-9 col-md-9 col-sm-6 col-xs-12 field-value'}, String(results.error)));
     } else {
         console.log(results[0].value.airName, results[0].value.airIsRegd, results[0].value.airIsFunded, results[0].value.airAddr);
         let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
@@ -219,13 +243,29 @@ function displayAir(title, description, initDispDone, results) {
         } else {
             voteStatus = "NOT yet a Voter"
         }
-        // displayListDiv.appendChild(DOM.div({className: 'col-sm-8 field-value'}, `Name: ${String(results[0].value.airName)}, Reg'd: ${String(results[0].value.airIsRegd)}, Funded: ${String(results[0].value.airIsFunded)}, Addr: ${String(results[0].value.airAddr)}` ));
-        displayListDiv.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
-        displayListDiv.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
+        displayListRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        displayListRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
     }
     displayDiv.append(section);
-    section.appendChild(displayListDiv);
+    displayListDiv.appendChild(displayListRow);
     // })
+}
+
+// CLEAR the Airline List Display
+function displayAirClear(initDispDone, label) {
+    let displayDiv = DOM.elid("display-airline");
+    let section = DOM.section();
+    if (initDispDone) {
+        let displayListRemove = DOM.elid('airline-list-row');
+        displayListRemove.parentNode.removeChild(displayListRemove); // Clears Current Display List
+    }
+    let displayListDiv = DOM.elid("airline-list-display");
+    let displayListRow = section.appendChild(DOM.div({id: 'airline-list-row', className:'row'}));
+    displayListRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-4 col-sm-3 col-xs-12 field'}, 'Number'));
+    displayListRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-4 col-sm-3 col-xs-12 field'}, label));
+    displayListRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-4 col-sm-3 col-xs-12 field'}, 'Voting Status'));
+    displayDiv.append(section);
+    displayListDiv.appendChild(displayListRow);
 }
 
 // Registering Airline Section
@@ -336,5 +376,3 @@ function displayOracles(title, description, results) {
     })
     displayDiv.append(section);
 }
-
-

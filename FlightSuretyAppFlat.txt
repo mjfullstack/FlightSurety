@@ -57,11 +57,14 @@ library SafeMath {
 // File: contracts\FlightSuretyData.sol
 
 pragma solidity ^0.4.25;
+// pragma experimental ABIEncoderV2;
 
 // import "./SafeMath.sol";
 
 contract FlightSuretyData {
     using SafeMath for uint256;
+
+  uint256 AIRLINE_REG_FEE = 1; // eth
 
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
@@ -91,14 +94,19 @@ contract FlightSuretyData {
                                                         // contract if false
     mapping(address => bool) authorizedContracts;       // Mapping: which contracts can call in
     mapping(string => Airline) airlines;                // Mapping for storing airlines
-    mapping(string => Passenger) passengers;            // Mapping for storing passengers
+    string[] public airNamesList;
     uint256 totalVoters = 1; // The first airline is registered by the constructor, so 1 not 0
+
+    mapping(string => Passenger) passengers;            // Mapping for storing passengers
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
     /********************************************************************************************/
     // Production events
     event AirlineRegisteredDATA(bool _isRegd);
+    event AirlineFundedDATA(bool _isFunded);
+    event CheckAirlineRegisteredDATA(bool _isRegd);
+    event CheckAirlineFundedDATA(bool _isFunded);
 
     // Define debugging event
     event LoggingDATA(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
@@ -129,6 +137,7 @@ contract FlightSuretyData {
             currVoteCountM: 1,
             currTtlVotersN: 1 // FIRST AIRLINE
         });
+        airNamesList.push(airlines["Uno Air"].name);
     }
 
     /********************************************************************************************/
@@ -165,6 +174,26 @@ contract FlightSuretyData {
     {
         require(authorizedContracts[msg.sender], "Caller is not authorized to call this contract");
         _;
+    }
+
+    // /// @dev Define a modifer that verifies the Caller
+    // modifier verifyCaller (address _address) {
+    //     require(msg.sender == _address); 
+    //     _;
+    // }
+
+    /// @dev Define a modifier that checks if the paid amount is sufficient to cover the price
+    modifier paidEnough(uint256 _price) { 
+        require(msg.value >= _price); 
+        _;
+    }
+    
+    /// @dev Define a modifier that returns overpayment
+    modifier checkValue(address _payer, uint256 _price) {
+        _; // This structure gets the modifier to execute AFTER the function instead of usually first.
+        uint256 amountPaid = msg.value;
+        uint256 amountToReturn = amountPaid.sub(_price);
+        _payer.transfer(amountToReturn);
     }
 
     /********************************************************************************************/
@@ -240,33 +269,35 @@ contract FlightSuretyData {
     */   
     function registerAirline(
         string  _name,
-        uint256 _bal,
+        // uint256 _bal,
         address _addr
     )
         external
-        // pure
         // Don't think this can work since changing things on the blockchain takes TIME!!!
         // SO... use emit events instead like Supplychain did
         returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
     {
         require(!airlines[_name].isRegistered, "Airline is already registered.");
-        require(_bal >= 1, "Insufficuent funds provided to register your airline.");
+        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         totalVoters = totalVoters.add(1); // count of successful registrations
         // Register new airline 
         airlines[_name] = Airline ({
             name: _name,
             isRegistered: true,
-            isFunded: true, // _bal >= 10 ether ? true : false,
-            balance: _bal,
+            isFunded: false, // _bal >= 10 ether ? true : false,
+            balance: 0,
             // isActive: airlines[_name].isRegistered && airlines[_name].isFunded,
             wallet: _addr,
             currVoteCountM: 1,
             currTtlVotersN: totalVoters
         });
+        airNamesList.push(_name);
         emit AirlineRegisteredDATA(airlines[_name].isRegistered);
         emit LoggingDATA("FS DATA registerAirline(): ", 
-            airlines[_name].name, 
-            airlines[_name].balance, 
+            // airlines[_name].name, 
+            airNamesList[totalVoters.sub(1)],
+            // airlines[_name].balance, 
+            airNamesList.length,
             airlines[_name].currTtlVotersN, 
             FlightSuretyData.isAirlineRegistered(_name),
             contractOwner
@@ -317,7 +348,92 @@ contract FlightSuretyData {
             // address airAddr = airlineView.wallet;
             // uint256 airVoteCount = airlineView.currVoteCountM;
             // uint256 airTtlVoters = airlineView.currTtlVotersN;
+        emit CheckAirlineRegisteredDATA(airlineIsRegistered);
         return (airlineIsRegistered);
+    }
+
+   /**
+    * @dev CHECK IF a previously registered airline has been funded
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */
+    function isAirlineFunded(string _name) // ALWAYS FALSE
+        // external
+        public
+        view
+        returns (bool airlineIsFunded)
+    {
+        // string memory airName = airlines[_name].name; // Unnecessary
+        airlineIsFunded = airlines[_name].isFunded;
+        emit CheckAirlineFundedDATA(airlineIsFunded);
+        return (airlineIsFunded);
+    }
+
+    function getAirlineStatus(string _name) // ALWAYS FALSE, both 1 or 2 return values
+        // external
+        public
+        view
+        returns (
+            // bool airlineIsRegistered,
+            bool airlineIsFunded)
+    {
+        Airline memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.currVoteCountM,
+         airlineView.currTtlVotersN
+        ) = FlightSuretyData.retrieveAirline(_name);
+            string memory airName = airlineView.name;
+            // airlineIsRegistered = airlineView.isRegistered;
+            airlineIsFunded = airlineView.isFunded;
+        // emit CheckAirlineRegisteredDATA(airlineIsRegistered);
+        emit CheckAirlineFundedDATA(airlineIsFunded);
+        // return (airlineIsRegistered, airlineIsFunded);
+        return (airlineIsFunded);
+    }
+
+    /**
+    * @dev Retrieve an array of airline names that were pushed onto the 
+    *      array at registration
+    *
+    */
+    // function getAirlineList()
+    // public
+    // returns(string[] _list)
+    // {
+    //     _list = airNamesList;
+    //     return _list;
+    // }
+
+    /**
+    * @dev Retrieve number of airlines registered via array.length
+    *      of airline names that were pushed onto the airNamesList array at
+    *      registration
+    *
+    */
+    function getAirlineCount()
+        public
+        view
+        returns(uint256 _count)
+    {
+        _count = airNamesList.length;
+        return _count;
+    }
+
+    /**
+    * @dev Retrieve NAME of registered airline in the airNamesList array
+    *
+    */
+    function getAirlineName(uint256 _num)
+        public
+        view
+        returns(string _name)
+    {
+        _name = airNamesList[_num];
+        return _name;
     }
 
    /**
@@ -359,6 +475,42 @@ contract FlightSuretyData {
     }
 
    /**
+    * @dev Initial funding for the insurance. Unless there are too many delayed flights
+    *      resulting in insurance payouts, the contract should be self-sustaining
+    *
+    */   
+    function fundAirline(
+        string  _name,
+        uint256 _bal, // msg.value ultimately
+        address _addr
+    )
+        external
+        payable
+        // paidEnough(AIRLINE_REG_FEE)
+        // checkValue(_addr, AIRLINE_REG_FEE)
+        returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
+    {
+        require(airlines[_name].isRegistered, "Airline was NOT previously registered.");
+        // require(airlines[_name].wallet == _addr, "Funding Airline's address does NOT match airline's registered address");
+        // require(airlines[_name].wallet == msg.sender, "Sending wallet address does NOT match airline's registered address");
+        // require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to register your airline.");
+        // require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to register your airline.");
+        totalVoters = totalVoters.add(1); // count of successful registrations
+        // Fund Previously Registered Airline 
+        airlines[_name].isFunded = true;
+        airlines[_name].balance = airlines[_name].balance.add(_bal); // msg.value ultimately
+        emit AirlineFundedDATA(airlines[_name].isFunded);
+        emit LoggingDATA("FS DATA fundAirline(): ", 
+            airlines[_name].name, 
+            airlines[_name].balance, 
+            airlines[_name].currTtlVotersN, 
+            FlightSuretyData.isAirlineFunded(_name),
+            contractOwner
+        );
+        return airlines[_name].isFunded;
+    }
+
+   /**
     * @dev Buy insurance for a flight
     *
     */   
@@ -392,18 +544,6 @@ contract FlightSuretyData {
     {
     }
 
-   /**
-    * @dev Initial funding for the insurance. Unless there are too many delayed flights
-    *      resulting in insurance payouts, the contract should be self-sustaining
-    *
-    */   
-    function fund(
-    )
-        public
-        payable
-    {
-    }
-
     function getFlightKey(
         address airline,
         string memory flight,
@@ -416,6 +556,13 @@ contract FlightSuretyData {
         return keccak256(abi.encodePacked(airline, flight, timestamp));
     }
 
+    function fund(
+    )
+        external
+        pure
+    {
+    }
+
     /**
     * @dev Fallback function for funding smart contract.
     *
@@ -423,8 +570,9 @@ contract FlightSuretyData {
     function() 
         external 
         payable 
-    {
-        fund();
+    { // was fund() which TBD different fundings vs ONE fallback
+        // fundAirline(); // Why doesn't this work?
+        this.fund();
     }
 
 
@@ -595,6 +743,7 @@ contract FlightSuretyApp is AirlineRole {
     /********************************************************************************************/
     // Production events
     event AirlineRegisteredAPP(bool _success);
+    event AirlineFundedAPP(bool _success);
 
     // Define debugging event
     event LoggingAPP(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
@@ -624,6 +773,12 @@ contract FlightSuretyApp is AirlineRole {
     modifier requireContractOwner()
     {
         require(msg.sender == contractOwner, "Caller is not contract owner");
+        _;
+    }
+
+    /// @dev Define a modifer that verifies the Caller
+    modifier verifyCaller (address _address) {
+        require(msg.sender == _address); 
         _;
     }
 
@@ -679,31 +834,32 @@ contract FlightSuretyApp is AirlineRole {
     */   
     function registerAirline(
         string  _name,
-        uint256 _bal,
-        address _addr
+        address _addr,
+        address _sponsor
     )
         onlyAirline
+        verifyCaller(_sponsor)
         external
-        payable
+        // payable
         returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
     {
         uint256 votes;
         require(!flightSuretyData.isAirlineRegistered(_name), "Airline is already registered.");
-        require(_bal >= 1, "Insufficuent funds provided to register your airline.");
         // Register new airline 
         addAirline(_addr); // Add to list of airlines for Role Checking        
-        success = flightSuretyData.registerAirline(_name, _bal, _addr);
-        // When registered, it will have 1 vote, but could retrieve actual value
-        if (success) {votes = 1;} else {votes = 0;}
-        // return (success, votes);
+        success = flightSuretyData.registerAirline(_name, _addr);
+        // // When registered, it will have 1 vote, but could retrieve actual value
+        // if (success) {votes = 1;} else {votes = 0;}
+        // // return (success, votes);
         emit AirlineRegisteredAPP(success);
         emit LoggingAPP("FS APP registerAirline(): ", 
             _name, 
-            _bal, 
-            votes,
+            0, 
+            // votes,
+            flightSuretyData.getAirlineCount(), // Gets Correct Number, while called from test doesn't!
             // success,
             flightSuretyData.isAirlineRegistered(_name), 
-            _addr
+            _addr // _sponsor
         );
         
         return (success);
@@ -743,7 +899,8 @@ contract FlightSuretyApp is AirlineRole {
             airBal = airlineView.balance;
             airAddr = airlineView.wallet;
             airVoteCount = airlineView.currVoteCountM;
-            airTtlVoters = airlineView.currTtlVotersN;
+            // airTtlVoters = airlineView.currTtlVotersN;
+            airTtlVoters = flightSuretyData.getAirlineCount();
 
         return (
             airName,
@@ -755,6 +912,62 @@ contract FlightSuretyApp is AirlineRole {
             airTtlVoters
         );
     }
+
+   /**
+    * @dev FUND an airline previously added to the registration list
+    *
+    */   
+    function fundAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
+    )
+        // onlyAirline
+        // verifyCaller(_addr)
+        external
+        payable
+        returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
+    {
+        uint256 votes;
+        require(flightSuretyData.isAirlineRegistered(_name), "Airline is NOT registered.");
+        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        // Register new airline 
+        // addAirline(_addr); // Add to list of airlines for Role Checking        
+        success = flightSuretyData.fundAirline(_name, _bal, _addr);
+        // When registered, it will have 1 vote, but could retrieve actual value
+        if (success) {votes = 1;} else {votes = 0;}
+        // return (success, votes);
+        emit AirlineFundedAPP(success);
+        emit LoggingAPP("FS APP fundAirline(): ", 
+            _name, 
+            _bal, 
+            votes,
+            // success,
+            flightSuretyData.isAirlineFunded(_name), 
+            _addr
+        );
+        
+        return (success);
+    }
+
+    function getAirlineCount()
+        public
+        view
+        returns(uint256 _count)
+    {
+        _count = flightSuretyData.getAirlineCount();
+        return _count;
+    }
+
+    function getAirlineName(uint256 _num)
+        public
+        view
+        returns(string _name)
+    {
+        _name = flightSuretyData.getAirlineName(_num);
+        return _name;
+    }
+
 
    /**
     * @dev Register a future flight for insuring.
@@ -979,35 +1192,3 @@ contract FlightSuretyApp is AirlineRole {
 
 }   
 
-// Provide EXTERNAL CONTRACT REFERENCES... Similar to C++ Prototype
-/****** Not for Flattened File ***********
-contract FlightSuretyData {
-    function registerAirline(
-        string  _name,
-        uint256 _bal,
-        address _addr
-    )
-    external
-    returns (bool);
-
-    function isAirlineRegistered(string _name)
-        // external
-        public
-        view
-        returns (bool);
-
-    function retrieveAirline(string _name)
-        external
-        view
-        returns (
-            string airName, 
-            bool airIsRegd, 
-            bool airIsFunded, 
-            uint256 airBal, 
-            address airAddr,
-            uint256 airVoteCount,
-            uint256 airTtlVoters
-        );
-
-}
-****** Not for Flattened File ***********/

@@ -1,4 +1,5 @@
 pragma solidity ^0.4.25;
+// pragma experimental ABIEncoderV2;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 // import "./SafeMath.sol";
@@ -6,7 +7,7 @@ import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract FlightSuretyData {
     using SafeMath for uint256;
 
-  uint256 AIRLINE_REG_FEE = 10; // eth
+  uint256 AIRLINE_REG_FEE = 1; // eth
 
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
@@ -36,8 +37,10 @@ contract FlightSuretyData {
                                                         // contract if false
     mapping(address => bool) authorizedContracts;       // Mapping: which contracts can call in
     mapping(string => Airline) airlines;                // Mapping for storing airlines
-    mapping(string => Passenger) passengers;            // Mapping for storing passengers
+    string[] public airNamesList;
     uint256 totalVoters = 1; // The first airline is registered by the constructor, so 1 not 0
+
+    mapping(string => Passenger) passengers;            // Mapping for storing passengers
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -77,6 +80,7 @@ contract FlightSuretyData {
             currVoteCountM: 1,
             currTtlVotersN: 1 // FIRST AIRLINE
         });
+        airNamesList.push(airlines["Uno Air"].name);
     }
 
     /********************************************************************************************/
@@ -230,10 +234,13 @@ contract FlightSuretyData {
             currVoteCountM: 1,
             currTtlVotersN: totalVoters
         });
+        airNamesList.push(_name);
         emit AirlineRegisteredDATA(airlines[_name].isRegistered);
         emit LoggingDATA("FS DATA registerAirline(): ", 
-            airlines[_name].name, 
-            airlines[_name].balance, 
+            // airlines[_name].name, 
+            airNamesList[totalVoters.sub(1)],
+            // airlines[_name].balance, 
+            airNamesList.length,
             airlines[_name].currTtlVotersN, 
             FlightSuretyData.isAirlineRegistered(_name),
             contractOwner
@@ -331,7 +338,46 @@ contract FlightSuretyData {
         return (airlineIsFunded);
     }
 
+    /**
+    * @dev Retrieve an array of airline names that were pushed onto the 
+    *      array at registration
+    *
+    */
+    // function getAirlineList()
+    // public
+    // returns(string[] _list)
+    // {
+    //     _list = airNamesList;
+    //     return _list;
+    // }
 
+    /**
+    * @dev Retrieve number of airlines registered via array.length
+    *      of airline names that were pushed onto the airNamesList array at
+    *      registration
+    *
+    */
+    function getAirlineCount()
+        public
+        view
+        returns(uint256 _count)
+    {
+        _count = airNamesList.length;
+        return _count;
+    }
+
+    /**
+    * @dev Retrieve NAME of registered airline in the airNamesList array
+    *
+    */
+    function getAirlineName(uint256 _num)
+        public
+        view
+        returns(string _name)
+    {
+        _name = airNamesList[_num];
+        return _name;
+    }
 
    /**
     * @dev Retrieve a registered airline from registration list
