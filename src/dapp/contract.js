@@ -209,7 +209,7 @@ export default class Contract {
         let self = this;
         web3 = new Web3(self.web3);
         console.log(`self.owner: ${self.owner}`);
-        // let _fundsInEther = web3.utils.toWei(_funds, "ether");
+        // let _fundsInWei = web3.utils.toWei(_funds, "ether");
         // // self.flightSuretyApp.methods // OLD METHOD BEFORE WALLET
         //     // .registerAirline(_name, _funds, _addr, { from: self.airlines[0]}, (error, result) => { // 5 vs 3 args
         //     // .send({ from: self.airlines[0], value: 0}, (error, result) => { // function is not payable
@@ -217,6 +217,7 @@ export default class Contract {
         //     });
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
             return instance.registerAirline(_name, _addr, _sponsor, { from: _sponsor});
+            // return instance.registerAirline(_name, _addr, _sponsor);
             }).then(function(result) {
                 console.log(`contract.js registerAirline: result:`);
                 console.log(result);
@@ -231,9 +232,10 @@ export default class Contract {
         let self = this;
         web3 = new Web3(self.web3);
         console.log(`self.owner: ${self.owner}`);
-        let _fundsInEther = web3.utils.toWei(_funds, "ether");
+        console.log(`self.metamaskAccountID: ${self.metamaskAccountID}`);
+        let _fundsInWei = web3.utils.toWei(_funds, "ether");
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-            return instance.fundAirline(_name, _funds, _addr, { from: self.owner, value: _fundsInEther});
+            return instance.fundAirline(_name, _funds, _addr, { from: self.metamaskAccountID, value: _fundsInWei});
             }).then(function(result) {
                 console.log(`contract.js fundAirline: result:`);
                 console.log(result);

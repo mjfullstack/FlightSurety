@@ -212,7 +212,6 @@ contract FlightSuretyData {
     */   
     function registerAirline(
         string  _name,
-        // uint256 _bal,
         address _addr
     )
         external
@@ -221,7 +220,6 @@ contract FlightSuretyData {
         returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
     {
         require(!airlines[_name].isRegistered, "Airline is already registered.");
-        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         totalVoters = totalVoters.add(1); // count of successful registrations
         // Register new airline 
         airlines[_name] = Airline ({

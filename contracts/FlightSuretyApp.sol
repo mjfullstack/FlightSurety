@@ -156,7 +156,6 @@ contract FlightSuretyApp is AirlineRole {
         onlyAirline
         verifyCaller(_sponsor)
         external
-        // payable
         returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
     {
         uint256 votes;
