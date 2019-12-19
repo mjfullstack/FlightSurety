@@ -180,7 +180,7 @@ export default class Contract {
             });
     }
 
-    async retrieveAllAirlines(callback) {
+    async retrieveAllAirlineNames(callback) {
         let self = this;
         let testAirlineNames = [];
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
@@ -199,6 +199,31 @@ export default class Contract {
             console.log(`testAirlineNames ARRAY...`);
             console.log(testAirlineNames);
             callback(testAirlineNames);
+        })
+        .catch(function(err) {
+            console.log(err.message);
+        });
+    }
+
+    async retrieveNeedVotesAirlineNames(callback) {
+        let self = this;
+        let needVotesAirlineNames = [];
+        await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
+            return instance.getAirlineCount();
+        }).then( async function(airlineCount) {
+            console.log(`airlineCount ${airlineCount}`);
+            for (let i=0; i<airlineCount; i++) {
+                await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
+                    return instance.getAirlineName(i);
+                }).then ( (needVotesAirlineName) => {
+                    console.log(`Retrieve Airline NAME... APP.getAirlineName(${i}): needVotesAirlineName: ${needVotesAirlineName}`);
+                    needVotesAirlineNames.push(needVotesAirlineName);
+                    console.log(`Display needVotesAirlineNames ARRAY[${i}]: ${needVotesAirlineNames[i]} `);
+                })
+            }
+            console.log(`needVotesAirlineNames ARRAY...`);
+            console.log(needVotesAirlineNames);
+            callback(needVotesAirlineNames);
         })
         .catch(function(err) {
             console.log(err.message);

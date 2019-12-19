@@ -11,6 +11,7 @@ import './flightsurety.css';
     let initRegAirDispComplete = false;
     let initFundAirDispComplete = false;
     let initVoteAirDispComplete = false;
+    let initEligibleVoteAirDispComplete = false;
 
     let contract = new Contract('localhost', async () => {
         let opsStatusCheckCount = 0;
@@ -29,7 +30,11 @@ import './flightsurety.css';
         });
     
         // Retrieve Airline
-        getAllAirlines();
+        // getAllAirlines();
+        getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+        getSelectedAirlines("seekingVoterApprovalList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+        getSelectedAirlines("seekingFundsList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+        getSelectedAirlines("eligibleVoterList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
         // ALSO LOOKUP an Airline Status when clicked to check it...
         DOM.elid('lookup-airline').addEventListener('click', () => {
             let _name = DOM.elid('lookup-airline-name').value;
@@ -47,7 +52,8 @@ import './flightsurety.css';
                 });
             } else { // Otherwise, a null name retrieves ALL airlines
                 console.log("NULL _name: ", _name);
-                getAllAirlines();
+                // getAllAirlines();
+                getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
             }
         });
     
@@ -70,17 +76,20 @@ import './flightsurety.css';
                     await contract.retrieveOneAirline(airlineName, (error, retResult) => {
                         console.log(error, retResult, airlineName);
                         // displayRegAirline('Airline Registration', 'Add New Airlines to the Program', initRegAirDispComplete, [ { label: 'New Airline Registered', error: error, value: retResult} ]);
-                        getAllAirlines();
+                        // getAllAirlines();
+                        getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         console.log(`result.airIsRegd: ${retResult.airIsRegd}`);
                         // Count of total voters: Less than 3 display for funding; 4 or more display for voting
                         let ttlVoters = String(retResult.airTtlVoters);
                         console.log(`ttlVoters ${ttlVoters}`);
                         if (ttlVoters <= 4) {
                             displayFundAirlineClear('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, 'Approved Airline Requiring Funding');
-                            displayFundAirline('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, [ { label: 'Approved Airline Requiring Funding', error: error, value: retResult} ]);
+                            // displayFundAirline('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, [ { label: 'Approved Airline Requiring Funding', error: error, value: retResult} ]);
+                            getSelectedAirlines("seekingFundsList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         } else {
-                            displayVoteAirlineClear('Airline Voting', "Vote for a Sponsored Airline", initVoteAirDispComplete, 'Airline Seeking Voter Approval');
-                            displayVoteAirline('Airline Voting', 'Vote for a Sponsored Airline', initVoteAirDispComplete, [ { label: 'Airline Seeking Voter Approval', error: error, value: retResult} ]);
+                            displayVoteAirlineClear('Airline Voting - Initiation', "Initiate Voting for a Sponsored Airline", initVoteAirDispComplete, 'Airline Seeking Voter Approval');
+                            // displayVoteAirline('Airline Voting', 'Initiate Voting for a Sponsored Airline', initVoteAirDispComplete, [ { label: 'Airline Seeking Voter Approval', error: error, value: retResult} ]);
+                            getSelectedAirlines("seekingVoterApprovalList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         }
                     });
                     DOM.elid('reg-airline-name').value = "";
@@ -112,8 +121,9 @@ import './flightsurety.css';
                     await contract.retrieveOneAirline(airlineName, (error, fundResult) => {
                         console.log(error, fundResult, airlineName);
                         displayFundAirlineClear('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, 'Approved Airline Requiring Funding');
-                        // displayFundAirline('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, [ { label: 'Approved Airline Requiring Funding', error: error, value: fundResult} ]);
-                        getAllAirlines();
+                        // getAllAirlines();
+                        getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+                        getSelectedAirlines("seekingFundsList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         console.log(`result.airIsRegd: ${fundResult.airIsRegd}`);
                     });
                     DOM.elid('fund-airline-name').value = "";
@@ -124,10 +134,10 @@ import './flightsurety.css';
         })
     
         // VOTE FOR AIRLINE: User-submitted transaction
-        displayVoteAirlineClear('Airline Voting', "Vote for a Sponsored Airline", initVoteAirDispComplete, 'Airline Seeking Voter Approval');
-        // displayVoteAirline('Airline Voting', "Vote for a Sponsored Airline", initVoteAirDispComplete, [ { label: 'Voter Approved  Airline'} ]);
+        displayVoteAirlineClear('Airline Voting - Initiation', "Initiate Voting for a Sponsored Airline", initVoteAirDispComplete, 'Airline Seeking Voter Approval');
+        // displayVoteAirline('Airline Voting', "Initiate Voting for a Sponsored Airline", initVoteAirDispComplete, [ { label: 'Voter Approved  Airline'} ]);
         initVoteAirDispComplete = true;
-        DOM.elid('vote-airline-btn').addEventListener('click', async () => {
+        DOM.elid('initiate-vote-airline-btn').addEventListener('click', async () => {
             let airlineName = DOM.elid('vote-airline-name').value;
             let airlineAddress = DOM.elid('vote-airline-addr').value;
             console.log(`airlineName: ${airlineName}`);
@@ -140,9 +150,9 @@ import './flightsurety.css';
                 if (result.receipt.status == true) {
                     await contract.retrieveOneAirline(airlineName, (error, voteResult) => {
                         console.log(error, voteResult, airlineName);
-                        displayVoteAirlineClear('Airline Voting', "Vote for a Sponsored Airline", initVoteAirDispComplete, 'Airline Seeking Voter Approval');
-                        // displayVoteAirline('Airline Voting', 'Vote for a Sponsored Airline', initVoteAirDispComplete, [ { label: 'Airline Seeking Voter Approval', error: error, value: voteResult} ]);
-                        getAllAirlines();
+                        displayVoteAirlineClear('Airline Voting', "Initiate Voting for a Sponsored Airline", initVoteAirDispComplete, 'Airline Seeking Voter Approval');
+                        // getAllAirlines();
+                        getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         console.log(`result.airIsRegd: ${voteResult.airIsRegd}`);
                     });
                     DOM.elid('vote-airline-name').value = "";
@@ -172,10 +182,47 @@ import './flightsurety.css';
         });                
     }
 
-    async function getAllAirlines() {
-        await contract.retrieveAllAirlines(async (airNamesArray) => {
+    // async function getAllAirlines() {
+    //     await contract.retrieveAllAirlineNames(async (airNamesArray) => {
+    //         console.log(`airNamesArray: ${airNamesArray}`);
+    //         displayAirClear(initLookupDispComplete, 'Airline Status')
+    //         for (let i=0; i<airNamesArray.length; i++ ) {
+    //             await contract.retrieveOneAirline(airNamesArray[i], (error, result) => {
+    //                 if(error) {
+    //                     console.log(error.message);
+    //                 } else {
+    //                     console.log(result);
+    //                     console.log(result.airName, result.airIsRegd, result.airIsFunded, result.airAddr);
+    //                     displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
+    //                     initLookupDispComplete = true;
+    //                     console.log(`result.airIsRegd: ${result.airIsRegd}`);
+    //                 }
+    //             });
+    //         }
+    //     });
+    // }
+
+    // Get a subset of airlines based on intended placement on page
+    // getSelectedAirlines() // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+    async function getSelectedAirlines(_listId) {
+        await contract.retrieveAllAirlineNames(async (airNamesArray) => {
             console.log(`airNamesArray: ${airNamesArray}`);
-            displayAirClear(initLookupDispComplete, 'Airline Status')
+            console.log(`_listId = ${_listId}`);
+            switch(_listId) {
+                case "fullList":
+                    displayAirClear(initLookupDispComplete, 'Airline Status')
+                    break;
+                case "seekingVoterApprovalList":
+                    displayVoteAirlineClear('Airline Voting - Initiation', "Initiate Voting for a Sponsored Airline", initVoteAirDispComplete, 'Airline Seeking Voter Approval');
+                    break;
+                case "seekingFundsList":
+                    displayFundAirlineClear('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, 'Approved Airline Requiring Funding');
+                    break;
+                case "eligibleVoterList":
+                    displayEligibleVoterAirlineClear('Airline Voting - Session', "List of Airlines Eligibe to Vote", initEligibleVoteAirDispComplete, 'Voting Airlines');
+                    break;
+            }
+
             for (let i=0; i<airNamesArray.length; i++ ) {
                 await contract.retrieveOneAirline(airNamesArray[i], (error, result) => {
                     if(error) {
@@ -183,8 +230,29 @@ import './flightsurety.css';
                     } else {
                         console.log(result);
                         console.log(result.airName, result.airIsRegd, result.airIsFunded, result.airAddr);
-                        displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
-                        initLookupDispComplete = true;
+                        switch(_listId) {
+                            case "fullList":
+                                displayAir('Airline List', 'Retrieve Airline Details', initLookupDispComplete, [ { label: 'Airline Status', error: error, value: result} ]);
+                                initLookupDispComplete = true;
+                                break;
+                            case "seekingVoterApprovalList":
+                                if (result.airIsRegd && !result.airIsFunded) {
+                                    displayVoteAirline('Airline Voting - Initiation', 'Initiate Voting for a Sponsored Airline', initVoteAirDispComplete, [ { label: 'Airline Seeking(s) Voter Approval', error: error, value: result} ]);
+                                    initVoteAirDispComplete = true;
+                                }
+                                break;
+                            case "seekingFundsList":
+                                if (result.airIsRegd && /* approved && */ !result.airIsFunded) {
+                                    displayFundAirline('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, [ { label: 'Approved Airline(s) Requiring Funding', error: error, value: result} ]);
+                                    initFundAirDispComplete = true;
+                                }
+                                break;
+                            case "eligibleVoterList":
+                                if (result.airIsRegd && result.airIsFunded) {
+                                    displayEligibleVoterAirline('Airline Voting - Session', 'Voting Eligible Airlines', initEligibleVoteAirDispComplete, [ { label: 'Airlines Authorized to Vote', error: error, value: result} ]);
+                                }
+                                break;
+                        }
                         console.log(`result.airIsRegd: ${result.airIsRegd}`);
                     }
                 });
@@ -396,7 +464,62 @@ function displayFundAirlineClear(title, description, initDispDone, label) {
 //     displayDiv.append(section);
 // }
 // Airline Voting Section
+// Airline Seeking Votes Display
 function displayVoteAirline(title, description, initDispDone, results) {
+    let displayDiv = DOM.elid("vote-airline");
+    let section = DOM.section();
+    let displayVoteDiv = DOM.elid("airline-initiate-vote");
+    let displayVoteRow = DOM.elid('airline-initiate-vote-row');
+    // Count of total voters when this airline was registered serves as airline index number
+    // let ttlVoters = String(results.airTtlVoters); FAILS HERE!
+    let ttlVoters = String(results[0].value.airTtlVoters);
+    console.log(`ttlVoters ${ttlVoters}`);
+    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, ttlVoters));
+    if (results.error) {
+        displayVoteRow.appendChild(DOM.div({className: 'col col-lg-9 col-md-9 col-sm-6 col-xs-12 field-value'}, String(results.error)));
+    } else {
+        console.log(results);
+        console.log(results.error);
+        console.log(results.value);
+        console.log(results.airName, results.airIsRegd, results.airIsFunded, results[0].value.airAddr);
+        let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
+        let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
+        let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
+        let voteStatus;
+        if (results[0].value.airIsRegd && results[0].value.airIsFunded) {
+            voteStatus = "Eligible"
+        } else {
+            voteStatus = "NOT yet a Voter"
+        }
+        displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        displayVoteRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
+    }
+    displayDiv.append(section);
+    displayVoteDiv.appendChild(displayVoteRow);
+}
+
+// CLEAR the Airline Seeking Votes Display
+function displayVoteAirlineClear(title, description, initDispDone, label) {
+    let displayDiv = DOM.elid("vote-airline");
+    let section = DOM.section();
+    if (!initDispDone) {
+        section.appendChild(DOM.h2({className: "multi-section-title"}, title));
+        section.appendChild(DOM.h5(description));
+    } else {
+        let displayVoteRemove = DOM.elid('airline-initiate-vote-row');
+        displayVoteRemove.parentNode.removeChild(displayVoteRemove); // Clears Current Voting List
+    }
+    let displayVoteDiv = DOM.elid("airline-initiate-vote");
+    let displayVoteRow = section.appendChild(DOM.div({id: 'airline-initiate-vote-row', className:'row'}));
+    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-4 col-sm-3 col-xs-12 field'}, 'Number'));
+    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-4 col-sm-3 col-xs-12 field'}, label));
+    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-4 col-sm-3 col-xs-12 field'}, 'Voting Status'));
+    displayDiv.append(section);
+    displayVoteDiv.appendChild(displayVoteRow);
+}
+
+// ELEGIBLE Airline VOTERS
+function displayEligibleVoterAirline(title, description, initDispDone, results) {
     let displayDiv = DOM.elid("vote-airline");
     let section = DOM.section();
     // if (!initDispDone) {
@@ -404,8 +527,8 @@ function displayVoteAirline(title, description, initDispDone, results) {
     //     section.appendChild(DOM.h5(description));
     // }
     // results.map((result) => {
-    let displayVoteDiv = DOM.elid("airline-vote-display");
-    let displayVoteRow = DOM.elid('airline-vote-row');
+    let displayVoteDiv = DOM.elid("airline-voter-display");
+    let displayVoteRow = DOM.elid('airline-voter-row');
     // Count of total voters when this airline was registered serves as airline index number
     // let ttlVoters = String(results.airTtlVoters); FAILS HERE!
     let ttlVoters = String(results[0].value.airTtlVoters);
@@ -435,23 +558,24 @@ function displayVoteAirline(title, description, initDispDone, results) {
     displayVoteDiv.appendChild(displayVoteRow);
 }
 
-// CLEAR the Airline Voting Display
-function displayVoteAirlineClear(title, description, initDispDone, label) {
-    let displayDiv = DOM.elid("vote-airline");
+// CLEAR the ELEGIBLE Airline Voting Display
+function displayEligibleVoterAirlineClear(title, description, initDispDone, label) {
+    // let displayDiv = DOM.elid("vote-airline");
     let section = DOM.section();
     if (!initDispDone) {
         section.appendChild(DOM.h2({className: "multi-section-title"}, title));
         section.appendChild(DOM.h5(description));
     } else {
-        let displayVoteRemove = DOM.elid('airline-vote-row');
+        let displayVoteRemove = DOM.elid('airline-voter-row');
         displayVoteRemove.parentNode.removeChild(displayVoteRemove); // Clears Current Voting List
     }
-    let displayVoteDiv = DOM.elid("airline-vote-display");
-    let displayVoteRow = section.appendChild(DOM.div({id: 'airline-vote-row', className:'row'}));
+    let displayVoteDiv = DOM.elid("airline-voter-display");
+    let displayVoteRow = section.appendChild(DOM.div({id: 'airline-voter-row', className:'row'}));
     displayVoteRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-4 col-sm-3 col-xs-12 field'}, 'Number'));
     displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-4 col-sm-3 col-xs-12 field'}, label));
     displayVoteRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-4 col-sm-3 col-xs-12 field'}, 'Voting Status'));
-    displayDiv.append(section);
+    // displayDiv.append(section);
+    displayVoteDiv.append(section);
     displayVoteDiv.appendChild(displayVoteRow);
 }
 
