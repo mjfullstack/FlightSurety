@@ -171,7 +171,7 @@ contract FlightSuretyApp is AirlineRole {
             _name, 
             0, 
             // votes,
-            flightSuretyData.getAirlineCount(), // Gets Correct Number, while called from test doesn't!
+            flightSuretyData.getAirlineCount("all"), // Gets Correct Number, while called from test doesn't!
             // success,
             flightSuretyData.isAirlineRegistered(_name), 
             _addr // _sponsor
@@ -215,7 +215,7 @@ contract FlightSuretyApp is AirlineRole {
             airAddr = airlineView.wallet;
             airVoteCount = airlineView.currVoteCountM;
             airTtlVoters = airlineView.currTtlVotersN;
-            // airTtlVoters = flightSuretyData.getAirlineCount();
+            // airTtlVoters = flightSuretyData.getAirlineCount("all");
 
         return (
             airName,
@@ -265,21 +265,30 @@ contract FlightSuretyApp is AirlineRole {
         return (success);
     }
 
-    function getAirlineCount()
+    /**
+    * @dev Retrieve number of ALL registered airlines  via _listName == "all" from array.length
+    *      or all of FUNDED airline names that were pushed onto the airNamesList or airNamesFundedList 
+    *      array at registration
+    */
+    function getAirlineCount(string _listName)
         public
         view
         returns(uint256 _count)
     {
-        _count = flightSuretyData.getAirlineCount();
+        _count = flightSuretyData.getAirlineCount(_listName);
         return _count;
     }
 
-    function getAirlineName(uint256 _num)
+    /**
+    * @dev Retrieve NAME of registered airline from flightSuretyData in the airNamesList or airNamesFundedList array
+    *
+    */
+    function getAirlineName(string _listName, uint256 _num)
         public
         view
         returns(string _name)
     {
-        _name = flightSuretyData.getAirlineName(_num);
+        _name = flightSuretyData.getAirlineName(_listName, _num);
         return _name;
     }
 
@@ -550,12 +559,12 @@ contract FlightSuretyData {
             uint256 airTtlVoters
         );
 
-    function getAirlineCount()
+    function getAirlineCount(string _listName)
         public
         view
         returns(uint256 _count);
 
-    function getAirlineName(uint256 _num)
+    function getAirlineName(string _listName, uint256 _num)
         public
         view
         returns(string _name);

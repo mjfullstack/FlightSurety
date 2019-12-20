@@ -184,14 +184,14 @@ export default class Contract {
         let self = this;
         let testAirlineNames = [];
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-            return instance.getAirlineCount();
+            return instance.getAirlineCount("all");
         }).then( async function(airlineCount) {
             console.log(`airlineCount ${airlineCount}`);
             for (let i=0; i<airlineCount; i++) {
                 await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-                    return instance.getAirlineName(i);
+                    return instance.getAirlineName("all", i);
                 }).then ( (testAirlineName) => {
-                    console.log(`Retrieve Airline NAME... APP.getAirlineName(${i}): testAirlineName: ${testAirlineName}`);
+                    console.log(`Retrieve Airline NAME... APP.getAirlineName('all', ${i}): testAirlineName: ${testAirlineName}`);
                     testAirlineNames.push(testAirlineName);
                     console.log(`Display testAirlineNames ARRAY[${i}]: ${testAirlineNames[i]} `);
                 })
@@ -209,14 +209,14 @@ export default class Contract {
         let self = this;
         let needVotesAirlineNames = [];
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-            return instance.getAirlineCount();
+            return instance.getAirlineCount("all");
         }).then( async function(airlineCount) {
             console.log(`airlineCount ${airlineCount}`);
             for (let i=0; i<airlineCount; i++) {
                 await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-                    return instance.getAirlineName(i);
+                    return instance.getAirlineName("all", i);
                 }).then ( (needVotesAirlineName) => {
-                    console.log(`Retrieve Airline NAME... APP.getAirlineName(${i}): needVotesAirlineName: ${needVotesAirlineName}`);
+                    console.log(`Retrieve Airline NAME... APP.getAirlineName('all', ${i}): needVotesAirlineName: ${needVotesAirlineName}`);
                     needVotesAirlineNames.push(needVotesAirlineName);
                     console.log(`Display needVotesAirlineNames ARRAY[${i}]: ${needVotesAirlineNames[i]} `);
                 })

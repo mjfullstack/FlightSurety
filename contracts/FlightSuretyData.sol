@@ -3,18 +3,35 @@ pragma solidity ^0.4.25;
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 // import "./SafeMath.sol";
+// import "../../solidity-stringutils/src/strings.sol";
 
 contract FlightSuretyData {
     using SafeMath for uint256;
+    // using strings for *; // StringUtils // strings
 
-  uint256 AIRLINE_REG_FEE = 1; // eth
+  uint256 AIRLINE_REG_FEE = 1 ether; // eth
 
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
 
+    // Define enum 'State' for an instance in struct 'Airline' named 'airlineState' 
+    // with the following values:
+    enum State 
+    { 
+        Unregistered,           // 0, Default State, NO EVENT REQUIRED
+        Registered,             // 1, Entered into system, NOT a voter until funded, BEFORE 4 funded/voting airlines
+        AwaitingVotes,          // 2, For airlines AFTER 4 are FUNDED and therefore voters
+        AwaitingFunds,          // 3, Before 4 funded, immediately after registration? AFTER 4, after successful votes
+        Funded                  // 4, Allows participation and VOTING rights - addVoter Role
+    }
+
+    // Default should NOT be the same as any action to which a function sets the state variable.
+    State constant defaultState = State.Unregistered;
+
     struct Airline {
         string name;
+        // State airlineState;
         bool isRegistered;
         bool isFunded;
         uint256 balance;
@@ -38,6 +55,7 @@ contract FlightSuretyData {
     mapping(address => bool) authorizedContracts;       // Mapping: which contracts can call in
     mapping(string => Airline) airlines;                // Mapping for storing airlines
     string[] public airNamesList;
+    string[] public airNamesFundedList;
     uint256 totalVoters = 1; // The first airline is registered by the constructor, so 1 not 0
 
     mapping(string => Passenger) passengers;            // Mapping for storing passengers
@@ -350,30 +368,39 @@ contract FlightSuretyData {
     // }
 
     /**
-    * @dev Retrieve number of airlines registered via array.length
-    *      of airline names that were pushed onto the airNamesList array at
-    *      registration
-    *
+    * @dev Retrieve number of ALL registered airlines  via _listName == "all" from array.length
+    *      or all of FUNDED airline names that were pushed onto the airNamesList or airNamesFundedList 
+    *      array at registration
     */
-    function getAirlineCount()
+    function getAirlineCount(string _listName)
         public
         view
         returns(uint256 _count)
     {
-        _count = airNamesList.length;
+        // if (strings.equals(_listName, "funded")) { // if (_listName == "funded") {
+        if (keccak256(_listName) == keccak256("funded")) { // if (_listName == "funded") {
+            _count = airNamesFundedList.length;
+        } else { // "all" or just default behavior
+            _count = airNamesList.length;
+        }
         return _count;
     }
 
     /**
-    * @dev Retrieve NAME of registered airline in the airNamesList array
+    * @dev Retrieve NAME of registered airline in the airNamesList or airNamesFundedList array
     *
     */
-    function getAirlineName(uint256 _num)
+    function getAirlineName(string _listName, uint256 _num)
         public
         view
         returns(string _name)
     {
-        _name = airNamesList[_num];
+        // if (strings.equals(_listName, "funded")) { // if (_listName == "funded") {
+        if (keccak256(_listName) == keccak256("funded")) { // if (_listName == "funded") {
+            _name = airNamesFundedList[_num];
+        } else { // "all" or just default behavior
+            _name = airNamesList[_num];
+        }
         return _name;
     }
 
@@ -440,6 +467,7 @@ contract FlightSuretyData {
         // Fund Previously Registered Airline 
         airlines[_name].isFunded = true;
         airlines[_name].balance = airlines[_name].balance.add(_bal); // msg.value ultimately
+        airNamesFundedList.push(_name);
         emit AirlineFundedDATA(airlines[_name].isFunded);
         emit LoggingDATA("FS DATA fundAirline(): ", 
             airlines[_name].name, 

@@ -124,6 +124,7 @@ import './flightsurety.css';
                         // getAllAirlines();
                         getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         getSelectedAirlines("seekingFundsList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+                        getSelectedAirlines("eligibleVoterList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         console.log(`result.airIsRegd: ${fundResult.airIsRegd}`);
                     });
                     DOM.elid('fund-airline-name').value = "";
