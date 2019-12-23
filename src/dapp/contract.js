@@ -170,11 +170,30 @@ export default class Contract {
 
     async retrieveOneAirline(airName, callback) {
         let self = this;
+        let resultCombined;
         await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
-            return instance.retrieveAirline(airName);
-            }).then(function(result) {
-                callback(null, result);
+            // return instance.retrieveAirline(airName);
+            return instance.fetchAirlinePartA(airName);
+            }).then(async function(resultPartA) {
+                resultCombined = resultPartA;
+                console.log(`resultPartA AS resultCombined: ${resultCombined}`)
+                console.log(resultCombined)
+                await self.contracts.FlightSuretyApp.deployed().then(function(instance) {
+                    return instance.fetchAirlinePartB(airName);
+                    }).then(function(resultPartB) {
+                        resultCombined.airIsCharterMember = resultPartB.airIsCharterMember;
+                        resultCombined.airIsVoterApproved = resultPartB.airIsVoterApproved;
+                        resultCombined.airIsRejected = resultPartB.airIsRejected;
+                        resultCombined.airVoteNoCount = resultPartB.airVoteNoCount;
+                        resultCombined.totalAirlines = resultPartB.totalAirlines;
+                        resultCombined.totalVoters = resultPartB.totalVoters;
+                        console.log(`resultPartB: ${resultPartB}`)
+                        console.log(`resultCombined: ${resultCombined}`)
+                        console.log(resultPartB)
+                        console.log(resultCombined)
+                        callback(null, resultCombined);
             })
+        })
             .catch(function(err) {
                 console.log(err.message);
             });

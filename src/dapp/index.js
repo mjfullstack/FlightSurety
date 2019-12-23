@@ -31,10 +31,10 @@ import './flightsurety.css';
     
         // Retrieve Airline
         // getAllAirlines();
-        getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
-        getSelectedAirlines("seekingVoterApprovalList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
-        getSelectedAirlines("seekingFundsList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
-        getSelectedAirlines("eligibleVoterList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+        getSelectedAirlines("fullList"); // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+        getSelectedAirlines("seekingVoterApprovalList"); // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+        getSelectedAirlines("seekingFundsList"); // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+        getSelectedAirlines("eligibleVoterList"); // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
         // ALSO LOOKUP an Airline Status when clicked to check it...
         DOM.elid('lookup-airline').addEventListener('click', () => {
             let _name = DOM.elid('lookup-airline-name').value;
@@ -80,9 +80,13 @@ import './flightsurety.css';
                         getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         console.log(`result.airIsRegd: ${retResult.airIsRegd}`);
                         // Count of total voters: Less than 3 display for funding; 4 or more display for voting
-                        let ttlVoters = String(retResult.airTtlVoters);
-                        console.log(`ttlVoters ${ttlVoters}`);
-                        if (ttlVoters <= 4) {
+                        let airIndex = String(retResult.airIndex);
+                        console.log(`airIndex ${airIndex}`);
+                        let totalAirlines = String(retResult.totalAirlines);
+                        console.log(`airIndex ${totalAirlines}`);
+                        let totalVoters = String(retResult.totalVoters);
+                        console.log(`airIndex ${totalVoters}`);
+                        if (totalVoters <= 4) {
                             displayFundAirlineClear('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, 'Approved Airline Requiring Funding');
                             // displayFundAirline('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, [ { label: 'Approved Airline Requiring Funding', error: error, value: retResult} ]);
                             getSelectedAirlines("seekingFundsList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
@@ -122,9 +126,9 @@ import './flightsurety.css';
                         console.log(error, fundResult, airlineName);
                         displayFundAirlineClear('Airline Funding', 'Fund an Approved Airline', initFundAirDispComplete, 'Approved Airline Requiring Funding');
                         // getAllAirlines();
-                        getSelectedAirlines("fullList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
-                        getSelectedAirlines("seekingFundsList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
-                        getSelectedAirlines("eligibleVoterList") // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+                        getSelectedAirlines("fullList"); // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+                        getSelectedAirlines("seekingFundsList"); // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
+                        getSelectedAirlines("eligibleVoterList"); // fullList, seekingVoterApprovalList, seekingFundsList, eligibleVoterList
                         console.log(`result.airIsRegd: ${fundResult.airIsRegd}`);
                     });
                     DOM.elid('fund-airline-name').value = "";
@@ -266,6 +270,8 @@ import './flightsurety.css';
 
 function displayOps(title, description, count, currAcct, results) {
     let displayDiv = DOM.elid("display-ops");
+    // let displayDivHover = DOM.elid("display-ops-hover");
+    // let displayDivOverlay = DOM.elid("display-ops-overlay-h2");
     let section = DOM.section();
     console.log(`count: ${count}`)
     console.log(`currAcct: ${currAcct}`)
@@ -286,6 +292,8 @@ function displayOps(title, description, count, currAcct, results) {
     let row = section.appendChild(DOM.div({id: 'ops-res-row', className:'row'}));
     row.appendChild(DOM.div({id: 'ops-res-label', className: 'col col-sm-4 field'}, "Current Account: "));
     row.appendChild(DOM.div({id: 'ops-res-value', className: 'col col-sm-8 field-value'}, String(currAcct)));
+    // displayDivHover.appendChild(DOM.div({id: 'ops-res-value', className: 'col col-sm-8 field-value hovereffect'}, String(currAcct)));
+    // displayDivOverlay.appendChild(DOM.div({id: 'ops-res-value', className: 'col col-sm-8 field-value overlay container'}, String(currAcct)));
     results.map((result) => {
         row.appendChild(DOM.div({id: 'ops-res-label', className: 'col col-sm-4 field'}, result.label));
         row.appendChild(DOM.div({id: 'ops-res-value', className: 'col col-sm-8 field-value'}, result.error ? String(result.error) : String(result.value)));
@@ -306,9 +314,9 @@ function displayAir(title, description, initDispDone, results) {
     let displayListDiv = DOM.elid("airline-list-display");
     let displayListRow = DOM.elid('airline-list-row');
     // Count of total voters when this airline was registered serves as airline index number
-    let ttlVoters = String(results[0].value.airTtlVoters);
-    console.log(`ttlVoters ${ttlVoters}`);
-    displayListRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, ttlVoters));
+    let airIndex = String(results[0].value.airIndex);
+    console.log(`airIndex ${airIndex}`);
+    displayListRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, airIndex));
     if (results.error) {
         displayListRow.appendChild(DOM.div({className: 'col col-lg-9 col-md-9 col-sm-6 col-xs-12 field-value'}, String(results.error)));
     } else {
@@ -316,13 +324,21 @@ function displayAir(title, description, initDispDone, results) {
         let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
         let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
         let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
+        let voterType;
+        if (results[0].value.airIsCharterMember) {
+            voterType = "Charter Member, ";
+        } else if (results[0].value.airIsVoterApproved) {
+            voterType = "Voter Approved, ";
+        } else {
+            voterType = "";
+        }
         let voteStatus;
         if (results[0].value.airIsRegd && results[0].value.airIsFunded) {
             voteStatus = "Eligible"
         } else {
-            voteStatus = "NOT yet a Voter"
+            voteStatus = "NOT Eligible"
         }
-        displayListRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        displayListRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, ${voterType}Addr: ${addr}` ));
         displayListRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
     }
     displayDiv.append(section);
@@ -389,9 +405,9 @@ function displayFundAirline(title, description, initDispDone, results) {
     let displayFundDiv = DOM.elid("airline-fund-display");
     let displayFundRow = DOM.elid('airline-fund-row');
     // Count of total voters when this airline was registered serves as airline index number
-    let ttlVoters = String(results[0].value.airTtlVoters);
-    console.log(`ttlVoters ${ttlVoters}`);
-    displayFundRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, ttlVoters));
+    let airIndex = String(results[0].value.airIndex);
+    console.log(`airIndex ${airIndex}`);
+    displayFundRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, airIndex));
     if (results.error) {
         displayFundRow.appendChild(DOM.div({className: 'col col-lg-9 col-md-9 col-sm-6 col-xs-12 field-value'}, String(results.error)));
     } else {
@@ -399,17 +415,12 @@ function displayFundAirline(title, description, initDispDone, results) {
         console.log(results.error);
         console.log(results.value);
         console.log(results.airName, results.airIsRegd, results.airIsFunded, results[0].value.airAddr);
-        let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
-        let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
+        let balance = String(results[0].value.airBal)
         let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
-        let voteStatus;
-        if (results[0].value.airIsRegd && results[0].value.airIsFunded) {
-            voteStatus = "Eligible"
-        } else {
-            voteStatus = "NOT yet a Voter"
-        }
-        displayFundRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
-        displayFundRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
+        // displayFundRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        // displayFundRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
+        displayFundRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, Addr: ${String(results[0].value.airAddr)}` ));
+        displayFundRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${balance}` ));
     }
     // }
     displayDiv.append(section);
@@ -431,7 +442,7 @@ function displayFundAirlineClear(title, description, initDispDone, label) {
     let displayFundRow = section.appendChild(DOM.div({id: 'airline-fund-row', className:'row'}));
     displayFundRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-4 col-sm-3 col-xs-12 field'}, 'Number'));
     displayFundRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-4 col-sm-3 col-xs-12 field'}, label));
-    displayFundRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-4 col-sm-3 col-xs-12 field'}, 'Voting Status'));
+    displayFundRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-4 col-sm-3 col-xs-12 field'}, 'Funding Balance'));
     displayDiv.append(section);
     displayFundDiv.appendChild(displayFundRow);
 }
@@ -471,28 +482,22 @@ function displayVoteAirline(title, description, initDispDone, results) {
     let section = DOM.section();
     let displayVoteDiv = DOM.elid("airline-initiate-vote");
     let displayVoteRow = DOM.elid('airline-initiate-vote-row');
-    // Count of total voters when this airline was registered serves as airline index number
-    // let ttlVoters = String(results.airTtlVoters); FAILS HERE!
-    let ttlVoters = String(results[0].value.airTtlVoters);
-    console.log(`ttlVoters ${ttlVoters}`);
-    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, ttlVoters));
+    let airIndex = String(results[0].value.airIndex);
+    console.log(`airIndex ${airIndex}`);
+    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, airIndex));
     if (results.error) {
         displayVoteRow.appendChild(DOM.div({className: 'col col-lg-9 col-md-9 col-sm-6 col-xs-12 field-value'}, String(results.error)));
     } else {
-        console.log(results);
-        console.log(results.error);
-        console.log(results.value);
         console.log(results.airName, results.airIsRegd, results.airIsFunded, results[0].value.airAddr);
-        let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
-        let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
         let addr = String(results[0].value.airAddr).substring(0, 6) + "..." + String(results[0].value.airAddr).substring(38);
         let voteStatus;
         if (results[0].value.airIsRegd && results[0].value.airIsFunded) {
             voteStatus = "Eligible"
         } else {
-            voteStatus = "NOT yet a Voter"
+            voteStatus = "Awaiting Voting"
         }
-        displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        // displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, Addr: ${String(results[0].value.airAddr)}` ));
         displayVoteRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
     }
     displayDiv.append(section);
@@ -531,16 +536,13 @@ function displayEligibleVoterAirline(title, description, initDispDone, results) 
     let displayVoteDiv = DOM.elid("airline-voter-display");
     let displayVoteRow = DOM.elid('airline-voter-row');
     // Count of total voters when this airline was registered serves as airline index number
-    // let ttlVoters = String(results.airTtlVoters); FAILS HERE!
-    let ttlVoters = String(results[0].value.airTtlVoters);
-    console.log(`ttlVoters ${ttlVoters}`);
-    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, ttlVoters));
+    // let airIndex = String(results.airIndex); FAILS HERE!
+    let airIndex = String(results[0].value.airIndex);
+    console.log(`airIndex ${airIndex}`);
+    displayVoteRow.appendChild(DOM.div({className: 'col col-lg-2 col-md-2 col-sm-3 col-xs-12 field'}, airIndex));
     if (results.error) {
         displayVoteRow.appendChild(DOM.div({className: 'col col-lg-9 col-md-9 col-sm-6 col-xs-12 field-value'}, String(results.error)));
     } else {
-        console.log(results);
-        console.log(results.error);
-        console.log(results.value);
         console.log(results.airName, results.airIsRegd, results.airIsFunded, results[0].value.airAddr);
         let registered = results[0].value.airIsRegd ? "Registered" : "NOT Registered";
         let funded = results[0].value.airIsFunded ? "Funded" : "NOT Funded";
@@ -551,7 +553,7 @@ function displayEligibleVoterAirline(title, description, initDispDone, results) 
         } else {
             voteStatus = "NOT yet a Voter"
         }
-        displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, ${registered}, ${funded}, Addr: ${addr}` ));
+        displayVoteRow.appendChild(DOM.div({className: 'col col-lg-7 col-md-8 col-sm-9 col-xs-12 field-value'}, `${String(results[0].value.airName)}, Addr: ${String(results[0].value.airAddr)}` ));
         displayVoteRow.appendChild(DOM.div({className: 'col col-lg-3 col-md-2 col-sm-9 col-xs-12 field-value'}, `${voteStatus}` ));
     }
     // }
