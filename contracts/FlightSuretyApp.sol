@@ -17,6 +17,9 @@ import "./FlightSuretyAccessControl/AirlineRole.sol";
 contract FlightSuretyApp is AirlineRole {
     using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to "prototype" in Javascript)
 
+    // CONSTANTS
+    uint256 AIRLINE_REG_FEE = 1; // ether;
+
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
@@ -102,6 +105,20 @@ contract FlightSuretyApp is AirlineRole {
     modifier verifyCaller (address _address) {
         require(msg.sender == _address); 
         _;
+    }
+
+    /// @dev Define a modifier that checks if the paid amount is sufficient to cover the price
+    modifier paidEnough(uint256 _price) { 
+        require(msg.value >= _price); 
+        _;
+    }
+    
+    /// @dev Define a modifier that returns overpayment
+    modifier checkValue(address _payer, uint256 _price) {
+        _; // This structure gets the modifier to execute AFTER the function instead of usually first.
+        uint256 amountPaid = msg.value;
+        uint256 amountToReturn = amountPaid.sub(_price);
+        _payer.transfer(amountToReturn);
     }
 
     /********************************************************************************************/
@@ -370,17 +387,21 @@ contract FlightSuretyApp is AirlineRole {
         uint256 _bal,
         address _addr
     )
-        // onlyAirline
-        // verifyCaller(_addr)
+        onlyAirline
+        verifyCaller(_addr)
+        paidEnough(AIRLINE_REG_FEE)
+        checkValue(_addr, AIRLINE_REG_FEE)        
         external
         payable
         returns(bool success)
     {
         uint256 votes;
         require(flightSuretyData.isAirlineRegistered(_name), "Airline is NOT registered.");
-        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to APP contract to register your airline.");
+        require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to APP contract to register your airline.");
         // Funding the newly approved airline 
-        success = flightSuretyData.fundAirline(_name, _bal, _addr);
+        // success = flightSuretyData.fundAirline(_name, AIRLINE_REG_FEE, _addr, {value: AIRLINE_REG_FEE}); // NOPE
+        success = flightSuretyData.fundAirline(_name, AIRLINE_REG_FEE, _addr);
         // addVoter(_addr); // Add to list of Voters for Role Checking        
         if (success) {votes = 1;} else {votes = 0;} // THIS WILL CHANGE
         emit AirlineFundedAPP(success);
@@ -388,7 +409,7 @@ contract FlightSuretyApp is AirlineRole {
             _name, 
             _bal, 
             votes,
-            flightSuretyData.isAirlineFunded(_name), 
+            true, // flightSuretyData.isAirlineFunded(_name), 
             _addr
         );
         
@@ -421,7 +442,7 @@ contract FlightSuretyApp is AirlineRole {
         returns (bool _result)
     {
         _result = flightSuretyData.getAirlineProperty(_airline, _prop);
-            emit CheckAirlinePropAPP(_airline, _prop, _result);
+            // emit CheckAirlinePropAPP(_airline, _prop, _result);
             return (_result);
     }
 

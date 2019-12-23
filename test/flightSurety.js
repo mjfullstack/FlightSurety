@@ -7,6 +7,9 @@ let DEBUG_LOGGING = true;
 contract('Flight Surety Tests', async (accounts) => {
 
   var config;
+      // CONSTANTS
+      let TEST_AIRLINE_REG_FEE = 1; // ether
+
   before('setup contract', async () => {
     config = await Test.Config(accounts);
     let beforeIsAuthedFALSE = await config.flightSuretyData.checkCallerStatus(config.flightSuretyApp.address);
@@ -15,6 +18,9 @@ contract('Flight Surety Tests', async (accounts) => {
     console.log(`FlightSurety in before: flightSuretyApp.address: ${config.flightSuretyApp.address}`); // 
     let beforeIsAuthedTRUE = await config.flightSuretyData.checkCallerStatus(config.flightSuretyApp.address);
     console.log(`FlightSurety in before: beforeIsAuthedTRUE: ${beforeIsAuthedTRUE}`);
+    for (let i=0; i<accounts.length;i++) {
+        console.log(`accounts[${i}] ${accounts[i]}`);
+    }
   });
 
   function log2consolePartA (_result) {
@@ -75,7 +81,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
     let air2reg = {
         name: 'Dosequis Air',
-        bal: 10, // web3.toWei("10", "ether"),
+        bal: TEST_AIRLINE_REG_FEE, // web3.toWei("10", "ether"),
         addr: config.testAddresses[0],
         votesYes: 0,
         votesNo: 0,
@@ -136,7 +142,7 @@ contract('Flight Surety Tests', async (accounts) => {
 
     let air2reg = {
         name: 'Dosequis Air',
-        bal: 10, // web3.toWei("10", "ether"),
+        bal: TEST_AIRLINE_REG_FEE, // web3.toWei("10", "ether"),
         addr: accounts[2],
         votesYes: 0,
         votesNo: 0,
@@ -308,7 +314,7 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
     // ARRANGE
     let air3reg = {
         name: 'Trifecta Air',
-        bal: 10, // web3.toWei("10", "ether"),
+        bal: TEST_AIRLINE_REG_FEE, // web3.toWei("10", "ether"),
         addr: accounts[3],
         votesYes: 0,
         votesNo: 0,
@@ -318,7 +324,7 @@ it('Can register an airline BY SECOND AIRLINE via the APP Contract...', async ()
 
     let air4reg = {
         name: 'Quatro King Air',
-        bal: 10, // web3.toWei("10", "ether"),
+        bal: TEST_AIRLINE_REG_FEE, // web3.toWei("10", "ether"),
         addr: accounts[4],
         votesYes: 0,
         votesNo: 0,
@@ -431,7 +437,7 @@ it('Can FUND an airline via the APP Contract...', async () => {
 
     let air2reg = {
         name: 'Dosequis Air',
-        bal: 10, // web3.toWei("10", "ether"),
+        bal: TEST_AIRLINE_REG_FEE, // web3.toWei("10", "ether"),
         addr: accounts[2],
         votesYes: 0,
         votesNo: 0,
@@ -441,7 +447,7 @@ it('Can FUND an airline via the APP Contract...', async () => {
 
     let air3reg = {
         name: 'Trifecta Air',
-        bal: 10, // web3.toWei("10", "ether"),
+        bal: TEST_AIRLINE_REG_FEE, // web3.toWei("10", "ether"),
         addr: accounts[3],
         votesYes: 0,
         votesNo: 0,
@@ -451,7 +457,7 @@ it('Can FUND an airline via the APP Contract...', async () => {
 
     let air4reg = {
         name: 'Quatro King Air',
-        bal: 10, // web3.toWei("10", "ether"),
+        bal: TEST_AIRLINE_REG_FEE, // web3.toWei("10", "ether"),
         addr: accounts[4],
         votesYes: 0,
         votesNo: 0,
@@ -627,7 +633,7 @@ it('Can FUND an airline via the APP Contract...', async () => {
     assert.equal(isCharterMember4, true, "APP contract could not CHARTER MEMBER FOURTH airline via fundAirline()");
     assert.equal(gotAir4PartB.totalAirlines.toNumber(), 4, "APP can't detect TOTAL AIRLINES count via retrieveAirline()");
     assert.equal(gotAir4PartB.totalVoters.toNumber(), 4, "APP can't detect TOTAL VOTERS count via retrieveAirline()");
-// assert.equal(isFund4, false, "APP contract JUST FAILING ON PURPOSE TO GET EVENTS LOGGING...");
+//  assert.equal(isFund4, false, "APP contract JUST FAILING ON PURPOSE TO GET EVENTS LOGGING...");
 
 });
 

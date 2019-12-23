@@ -7,7 +7,8 @@ import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
 contract FlightSuretyData {
     using SafeMath for uint256;
 
-  uint256 AIRLINE_REG_FEE = 1 ether; // eth
+    // CONSTANTS
+    uint256 AIRLINE_REG_FEE = 1 ether; // eth
 
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
@@ -166,20 +167,6 @@ contract FlightSuretyData {
     //     _;
     // }
 
-    /// @dev Define a modifier that checks if the paid amount is sufficient to cover the price
-    modifier paidEnough(uint256 _price) { 
-        require(msg.value >= _price); 
-        _;
-    }
-    
-    /// @dev Define a modifier that returns overpayment
-    modifier checkValue(address _payer, uint256 _price) {
-        _; // This structure gets the modifier to execute AFTER the function instead of usually first.
-        uint256 amountPaid = msg.value;
-        uint256 amountToReturn = amountPaid.sub(_price);
-        _payer.transfer(amountToReturn);
-    }
-
     /// @dev Define a modifier that checks airline approval status for FUNDING
     modifier requireIsApproved(string _name) {
         require(isApproved(_name), "Four or more airlines funded: Airline requires voter approval before funding.");
@@ -260,7 +247,7 @@ contract FlightSuretyData {
         view 
         returns(bool) 
     {
-        if (totalVoters <= 4) {
+        if (totalVoters < 4) {
             return true;
         } else {
             return airlines[_name].isVoterApproved;
@@ -328,7 +315,7 @@ contract FlightSuretyData {
     {
         // string airName = airlines[_name].name;        
         airlineIsRegistered = airlines[_name].isRegistered;
-        emit CheckAirlineRegisteredDATA(airlineIsRegistered);
+        // emit CheckAirlineRegisteredDATA(airlineIsRegistered);
         return (airlineIsRegistered);
     }
 
@@ -344,7 +331,7 @@ contract FlightSuretyData {
         returns (bool airlineIsFunded)
     {
         airlineIsFunded = airlines[_name].isFunded;
-        emit CheckAirlineFundedDATA(airlineIsFunded);
+        // emit CheckAirlineFundedDATA(airlineIsFunded);
         return (airlineIsFunded);
     }
 
@@ -370,27 +357,27 @@ contract FlightSuretyData {
         // }
         if (keccak256(abi.encodePacked(_prop)) == keccak256(abi.encodePacked("registered")) ) {
             _result = airlines[_airline].isRegistered;
-            emit CheckAirlinePropDATA(_airline, _prop, _result);
+            // emit CheckAirlinePropDATA(_airline, _prop, _result);
             return (_result);
         }
         if (keccak256(abi.encodePacked(_prop)) == keccak256(abi.encodePacked("funded")) ) {
             _result = airlines[_airline].isFunded;
-            emit CheckAirlinePropDATA(_airline, _prop, _result);
+            // emit CheckAirlinePropDATA(_airline, _prop, _result);
             return (_result);
         }
         if (keccak256(abi.encodePacked(_prop)) == keccak256(abi.encodePacked("charter")) ) {
             _result = airlines[_airline].isCharterMember;
-            emit CheckAirlinePropDATA(_airline, _prop, _result);
+            // emit CheckAirlinePropDATA(_airline, _prop, _result);
             return (_result);
         }
         if (keccak256(abi.encodePacked(_prop)) == keccak256(abi.encodePacked("voterApproved")) ) {
             _result = airlines[_airline].isVoterApproved;
-            emit CheckAirlinePropDATA(_airline, _prop, _result);
+            // emit CheckAirlinePropDATA(_airline, _prop, _result);
             return (_result);
         }
         if (keccak256(abi.encodePacked(_prop)) == keccak256(abi.encodePacked("rejected")) ) {
             _result = airlines[_airline].isRejected;
-            emit CheckAirlinePropDATA(_airline, _prop, _result);
+            // emit CheckAirlinePropDATA(_airline, _prop, _result);
             return (_result);
         }
         // if (keccak256(abi.encodePacked(_prop)) == keccak256(abi.encodePacked("balance")) ) {
@@ -624,14 +611,14 @@ contract FlightSuretyData {
         external
         payable
         requireIsApproved(_name)
-        // paidEnough(AIRLINE_REG_FEE)
-        // checkValue(_addr, AIRLINE_REG_FEE)
         returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
     {
         require(airlines[_name].isRegistered, "Airline was NOT previously registered.");
-        // require(airlines[_name].wallet == _addr, "Funding Airline's address does NOT match airline's registered address");
+        require(airlines[_name].wallet == _addr, "Funding Airline's address does NOT match airline's registered address");
+        // NOTE: msg.sender is the APP contract, NOT the airline wallet address!
+        //       msg.value is 0 when reaching here
         // require(airlines[_name].wallet == msg.sender, "Sending wallet address does NOT match airline's registered address");
-        // require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to register your airline.");
+        // require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds reaching DATA contract to register your airline.");
         // require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to register your airline.");
         totalVoters = totalVoters.add(1); // count of successful registrations
         // Fund Previously Registered Airline 
@@ -644,10 +631,10 @@ contract FlightSuretyData {
         emit AirlineFundedDATA(airlines[_name].isFunded);
         emit LoggingDATA("FS DATA fundAirline(): ", 
             airlines[_name].name, 
-            airlines[_name].balance, 
+            msg.value, 
             airlines[_name].index, 
             FlightSuretyData.isAirlineFunded(_name),
-            contractOwner
+            msg.sender
         );
         return airlines[_name].isFunded;
     }
