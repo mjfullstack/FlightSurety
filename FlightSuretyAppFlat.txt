@@ -1,0 +1,1194 @@
+
+// File: node_modules\openzeppelin-solidity\contracts\math\SafeMath.sol
+
+pragma solidity ^0.4.24;
+
+
+/**
+ * @title SafeMath
+ * @dev Math operations with safety checks that throw on error
+ */
+library SafeMath {
+
+  /**
+  * @dev Multiplies two numbers, throws on overflow.
+  */
+  function mul(uint256 _a, uint256 _b) internal pure returns (uint256 c) {
+    // Gas optimization: this is cheaper than asserting 'a' not being zero, but the
+    // benefit is lost if 'b' is also tested.
+    // See: https://github.com/OpenZeppelin/openzeppelin-solidity/pull/522
+    if (_a == 0) {
+      return 0;
+    }
+
+    c = _a * _b;
+    assert(c / _a == _b);
+    return c;
+  }
+
+  /**
+  * @dev Integer division of two numbers, truncating the quotient.
+  */
+  function div(uint256 _a, uint256 _b) internal pure returns (uint256) {
+    // assert(_b > 0); // Solidity automatically throws when dividing by 0
+    // uint256 c = _a / _b;
+    // assert(_a == _b * c + _a % _b); // There is no case in which this doesn't hold
+    return _a / _b;
+  }
+
+  /**
+  * @dev Subtracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+  */
+  function sub(uint256 _a, uint256 _b) internal pure returns (uint256) {
+    assert(_b <= _a);
+    return _a - _b;
+  }
+
+  /**
+  * @dev Adds two numbers, throws on overflow.
+  */
+  function add(uint256 _a, uint256 _b) internal pure returns (uint256 c) {
+    c = _a + _b;
+    assert(c >= _a);
+    return c;
+  }
+}
+
+// File: contracts\FlightSuretyData.sol
+
+pragma solidity ^0.4.25;
+// pragma experimental ABIEncoderV2;
+
+// import "./SafeMath.sol";
+
+contract FlightSuretyData {
+    using SafeMath for uint256;
+
+  uint256 AIRLINE_REG_FEE = 1; // eth
+
+    /********************************************************************************************/
+    /*                                       DATA VARIABLES                                     */
+    /********************************************************************************************/
+
+    struct Airline {
+        string name;
+        bool isRegistered;
+        bool isFunded;
+        uint256 balance;
+        // bool isActive;
+        address wallet;
+        uint256 currVoteCountM;
+        uint256 currTtlVotersN;
+    }
+
+    struct Passenger {
+        string name;
+        bool isRegistered;
+        bool isFunded;
+        uint256 balance;
+        address wallet;
+    }
+
+    address private contractOwner;                      // Account used to deploy contract
+    bool private operational;                           // Blocks all state changes throughout the 
+                                                        // contract if false
+    mapping(address => bool) authorizedContracts;       // Mapping: which contracts can call in
+    mapping(string => Airline) airlines;                // Mapping for storing airlines
+    string[] public airNamesList;
+    uint256 totalVoters = 1; // The first airline is registered by the constructor, so 1 not 0
+
+    mapping(string => Passenger) passengers;            // Mapping for storing passengers
+
+    /********************************************************************************************/
+    /*                                       EVENT DEFINITIONS                                  */
+    /********************************************************************************************/
+    // Production events
+    event AirlineRegisteredDATA(bool _isRegd);
+    event AirlineFundedDATA(bool _isFunded);
+    event CheckAirlineRegisteredDATA(bool _isRegd);
+    event CheckAirlineFundedDATA(bool _isFunded);
+
+    // Define debugging event
+    event LoggingDATA(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
+
+    /********************************************************************************************/
+    /*                                       CONSTRUCTOR                                        */
+    /********************************************************************************************/
+
+    /**
+    * @dev Constructor
+    *      The deploying account becomes contractOwner
+    */
+    constructor(
+        address firstAirline
+    ) 
+        public 
+    {
+        contractOwner = msg.sender;
+        operational = true;
+        // Register first airline per project rubic
+        airlines["Uno Air"] = Airline ({
+            name: "Uno Air",
+            isRegistered: true,
+            isFunded: true,
+            balance: 10,
+            // isActive: true,
+            wallet: firstAirline,
+            currVoteCountM: 1,
+            currTtlVotersN: 1 // FIRST AIRLINE
+        });
+        airNamesList.push(airlines["Uno Air"].name);
+    }
+
+    /********************************************************************************************/
+    /*                                       FUNCTION MODIFIERS                                 */
+    /********************************************************************************************/
+
+    // Modifiers help avoid duplication of code. They are typically used to validate something
+    // before a function is allowed to be executed.
+
+    /**
+    * @dev Modifier that requires the "operational" boolean variable to be "true"
+    *      This is used on all state changing functions to pause the contract in 
+    *      the event there is an issue that needs to be fixed
+    */
+    modifier requireIsOperational() 
+    {
+        require(operational, "Contract is currently not operational");
+        _;  // All modifiers require an "_" which indicates where the function body will be added
+    }
+
+    /**
+    * @dev Modifier that requires the "ContractOwner" account to be the function caller
+    */
+    modifier requireContractOwner()
+    {
+        require(msg.sender == contractOwner, "Caller is not contract owner");
+        _;
+    }
+
+    /**
+    * @dev Modifier that requires the "authorizedContracts" address to be the function caller
+    */
+    modifier requireAuthorizedCaller() // requireAuthorizedContract
+    {
+        require(authorizedContracts[msg.sender], "Caller is not authorized to call this contract");
+        _;
+    }
+
+    // /// @dev Define a modifer that verifies the Caller
+    // modifier verifyCaller (address _address) {
+    //     require(msg.sender == _address); 
+    //     _;
+    // }
+
+    /// @dev Define a modifier that checks if the paid amount is sufficient to cover the price
+    modifier paidEnough(uint256 _price) { 
+        require(msg.value >= _price); 
+        _;
+    }
+    
+    /// @dev Define a modifier that returns overpayment
+    modifier checkValue(address _payer, uint256 _price) {
+        _; // This structure gets the modifier to execute AFTER the function instead of usually first.
+        uint256 amountPaid = msg.value;
+        uint256 amountToReturn = amountPaid.sub(_price);
+        _payer.transfer(amountToReturn);
+    }
+
+    /********************************************************************************************/
+    /*                                       UTILITY FUNCTIONS                                  */
+    /********************************************************************************************/
+
+    /**
+    * @dev Get operating status of contract
+    *
+    * @return A bool that is the current operating status
+    */      
+    function isOperational() 
+        public 
+        view 
+        returns(bool) 
+    {
+        return operational;
+    }
+
+
+    /**
+    * @dev Sets contract operations on/off
+    *
+    * When operational mode is disabled, all write transactions except for this one will fail
+    */    
+    function setOperatingStatus(bool mode)
+        external
+        requireContractOwner 
+    {
+        operational = mode;
+    }
+
+    /**
+    * @dev ADDS App Contract Address to list of allowed contract callers
+    */    
+    function authorizeCaller(address _contractAddr)
+        requireContractOwner
+        public
+    {
+        authorizedContracts[_contractAddr] = true; // true
+    }
+
+    /**
+    * @dev REMOVES App Contract Address to list of allowed contract callers
+    */    
+    function deauthorizeCaller(address _contractAddr)
+        requireContractOwner
+        public
+    {
+        delete authorizedContracts[_contractAddr]; // false, delete is a keyword - even better!
+    }
+
+    /**
+    * @dev Function FOR DEVELOPMENT that checks if address is an "authorizedContracts"
+    */
+    function checkCallerStatus(address _contractAddr)
+        requireContractOwner
+        public 
+        view
+        returns(bool)
+    {
+        return(authorizedContracts[_contractAddr]);
+    }
+
+    /********************************************************************************************/
+    /*                                     SMART CONTRACT FUNCTIONS                             */
+    /********************************************************************************************/
+
+   /**
+    * @dev ADD an airline to the registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */   
+    function registerAirline(
+        string  _name,
+        // uint256 _bal,
+        address _addr
+    )
+        external
+        // Don't think this can work since changing things on the blockchain takes TIME!!!
+        // SO... use emit events instead like Supplychain did
+        returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
+    {
+        require(!airlines[_name].isRegistered, "Airline is already registered.");
+        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        totalVoters = totalVoters.add(1); // count of successful registrations
+        // Register new airline 
+        airlines[_name] = Airline ({
+            name: _name,
+            isRegistered: true,
+            isFunded: false, // _bal >= 10 ether ? true : false,
+            balance: 0,
+            // isActive: airlines[_name].isRegistered && airlines[_name].isFunded,
+            wallet: _addr,
+            currVoteCountM: 1,
+            currTtlVotersN: totalVoters
+        });
+        airNamesList.push(_name);
+        emit AirlineRegisteredDATA(airlines[_name].isRegistered);
+        emit LoggingDATA("FS DATA registerAirline(): ", 
+            // airlines[_name].name, 
+            airNamesList[totalVoters.sub(1)],
+            // airlines[_name].balance, 
+            airNamesList.length,
+            airlines[_name].currTtlVotersN, 
+            FlightSuretyData.isAirlineRegistered(_name),
+            contractOwner
+        );
+        return airlines[_name].isRegistered;
+    }
+
+   /**
+    * @dev CHECK IF an airline is in registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */
+    // THIS METHOD FAILS TO PRODUCE 'TRUE' WHEN AIRLINE IS REGISTERED
+    // SWITCHING TO NEW APPROACH BELOW...
+    // function isAirlineRegistered(string _name)
+    //     // external
+    //     public
+    //     view
+    //     returns (bool airlineIsRegistered)
+    // {
+    //     string airName = airlines[_name].name;        
+    //     airlineIsRegistered = airlines[_name].isRegistered;
+    //     return (airlineIsRegistered);
+    // }
+    // SINCE THE retrieveAirline() FUNCTION CAN GET THE CORRECT ANSWER(S),
+    // CALL IT AND ONLY RETURN THE ITEM OF INTEREST...
+    function isAirlineRegistered(string _name)
+        // external
+        public
+        view
+        returns (bool airlineIsRegistered)
+    {
+        Airline memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.currVoteCountM,
+         airlineView.currTtlVotersN
+        ) = FlightSuretyData.retrieveAirline(_name);
+            string memory airName = airlineView.name;
+            airlineIsRegistered = airlineView.isRegistered;
+            bool airIsFunded = airlineView.isFunded;
+            // NOTE 1: CompilerError: Stack too deep, try removing local variables... So commented
+            // NOTE 2: Doing so STILL can't return the correct value for airlineIsRegistered!
+            // uint256 airBal = airlineView.balance;
+            // address airAddr = airlineView.wallet;
+            // uint256 airVoteCount = airlineView.currVoteCountM;
+            // uint256 airTtlVoters = airlineView.currTtlVotersN;
+        emit CheckAirlineRegisteredDATA(airlineIsRegistered);
+        return (airlineIsRegistered);
+    }
+
+   /**
+    * @dev CHECK IF a previously registered airline has been funded
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */
+    function isAirlineFunded(string _name) // ALWAYS FALSE
+        // external
+        public
+        view
+        returns (bool airlineIsFunded)
+    {
+        // string memory airName = airlines[_name].name; // Unnecessary
+        airlineIsFunded = airlines[_name].isFunded;
+        emit CheckAirlineFundedDATA(airlineIsFunded);
+        return (airlineIsFunded);
+    }
+
+    function getAirlineStatus(string _name) // ALWAYS FALSE, both 1 or 2 return values
+        // external
+        public
+        view
+        returns (
+            // bool airlineIsRegistered,
+            bool airlineIsFunded)
+    {
+        Airline memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.currVoteCountM,
+         airlineView.currTtlVotersN
+        ) = FlightSuretyData.retrieveAirline(_name);
+            string memory airName = airlineView.name;
+            // airlineIsRegistered = airlineView.isRegistered;
+            airlineIsFunded = airlineView.isFunded;
+        // emit CheckAirlineRegisteredDATA(airlineIsRegistered);
+        emit CheckAirlineFundedDATA(airlineIsFunded);
+        // return (airlineIsRegistered, airlineIsFunded);
+        return (airlineIsFunded);
+    }
+
+    /**
+    * @dev Retrieve an array of airline names that were pushed onto the 
+    *      array at registration
+    *
+    */
+    // function getAirlineList()
+    // public
+    // returns(string[] _list)
+    // {
+    //     _list = airNamesList;
+    //     return _list;
+    // }
+
+    /**
+    * @dev Retrieve number of airlines registered via array.length
+    *      of airline names that were pushed onto the airNamesList array at
+    *      registration
+    *
+    */
+    function getAirlineCount()
+        public
+        view
+        returns(uint256 _count)
+    {
+        _count = airNamesList.length;
+        return _count;
+    }
+
+    /**
+    * @dev Retrieve NAME of registered airline in the airNamesList array
+    *
+    */
+    function getAirlineName(uint256 _num)
+        public
+        view
+        returns(string _name)
+    {
+        _name = airNamesList[_num];
+        return _name;
+    }
+
+   /**
+    * @dev Retrieve a registered airline from registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */   
+    function retrieveAirline(string _name)
+        // external
+        public
+        view
+        returns (
+            string airName, 
+            bool airIsRegd, 
+            bool airIsFunded, 
+            uint256 airBal, 
+            address airAddr,
+            uint256 airVoteCount,
+            uint256 airTtlVoters
+        )
+    {
+        airName = airlines[_name].name;
+        airIsRegd = airlines[_name].isRegistered;
+        airIsFunded = airlines[_name].isFunded;
+        airBal = airlines[_name].balance;
+        airAddr = airlines[_name].wallet;
+        airVoteCount = airlines[_name].currVoteCountM;
+        airTtlVoters = airlines[_name].currTtlVotersN;
+
+        return (
+            airName,
+            airIsRegd,
+            airIsFunded,
+            airBal,
+            airAddr,
+            airVoteCount,
+            airTtlVoters
+        );
+    }
+
+   /**
+    * @dev Initial funding for the insurance. Unless there are too many delayed flights
+    *      resulting in insurance payouts, the contract should be self-sustaining
+    *
+    */   
+    function fundAirline(
+        string  _name,
+        uint256 _bal, // msg.value ultimately
+        address _addr
+    )
+        external
+        payable
+        // paidEnough(AIRLINE_REG_FEE)
+        // checkValue(_addr, AIRLINE_REG_FEE)
+        returns(bool) // returns are for "other .sol contracts", not javascript. Use emit event
+    {
+        require(airlines[_name].isRegistered, "Airline was NOT previously registered.");
+        // require(airlines[_name].wallet == _addr, "Funding Airline's address does NOT match airline's registered address");
+        // require(airlines[_name].wallet == msg.sender, "Sending wallet address does NOT match airline's registered address");
+        // require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to register your airline.");
+        // require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to register your airline.");
+        totalVoters = totalVoters.add(1); // count of successful registrations
+        // Fund Previously Registered Airline 
+        airlines[_name].isFunded = true;
+        airlines[_name].balance = airlines[_name].balance.add(_bal); // msg.value ultimately
+        emit AirlineFundedDATA(airlines[_name].isFunded);
+        emit LoggingDATA("FS DATA fundAirline(): ", 
+            airlines[_name].name, 
+            airlines[_name].balance, 
+            airlines[_name].currTtlVotersN, 
+            FlightSuretyData.isAirlineFunded(_name),
+            contractOwner
+        );
+        return airlines[_name].isFunded;
+    }
+
+   /**
+    * @dev Buy insurance for a flight
+    *
+    */   
+    function buy(
+    )
+        external
+        payable
+    {
+
+    }
+
+    /**
+     *  @dev Credits payouts to insurees
+    */
+    function creditInsurees(
+    )
+        external
+        pure
+    {
+    }
+    
+
+    /**
+     *  @dev Transfers eligible payout funds to insuree
+     *
+    */
+    function pay(
+    )
+        external
+        pure
+    {
+    }
+
+    function getFlightKey(
+        address airline,
+        string memory flight,
+        uint256 timestamp
+    )
+        pure
+        internal
+        returns(bytes32) 
+    {
+        return keccak256(abi.encodePacked(airline, flight, timestamp));
+    }
+
+    function fund(
+    )
+        external
+        pure
+    {
+    }
+
+    /**
+    * @dev Fallback function for funding smart contract.
+    *
+    */
+    function() 
+        external 
+        payable 
+    { // was fund() which TBD different fundings vs ONE fallback
+        // fundAirline(); // Why doesn't this work?
+        this.fund();
+    }
+
+
+}
+
+// File: contracts\FlightSuretyAccessControl\Roles.sol
+
+pragma solidity ^0.4.24;
+
+/**
+ * @title Roles
+ * @dev Library for managing addresses assigned to a Role.
+ */
+library Roles {
+  struct Role {
+    mapping (address => bool) bearer;
+  }
+
+  /**
+   * @dev give an account access to this role
+   */
+  function add(Role storage role, address account) internal {
+    require(account != address(0));
+    require(!has(role, account));
+
+    role.bearer[account] = true;
+  }
+
+  /**
+   * @dev remove an account's access to this role
+   */
+  function remove(Role storage role, address account) internal {
+    require(account != address(0));
+    require(has(role, account));
+
+    role.bearer[account] = false;
+  }
+
+  /**
+   * @dev check if an account has this role
+   * @return bool
+   */
+  function has(Role storage role, address account)
+    internal
+    view
+    returns (bool)
+  {
+    require(account != address(0));
+    return role.bearer[account];
+  }
+}
+
+// File: contracts\FlightSuretyAccessControl\AirlineRole.sol
+
+pragma solidity ^0.4.24;
+
+// Import the library 'Roles'
+
+
+// Define a contract 'AirlineRole' to manage this role - add, remove, check
+contract AirlineRole {
+  using Roles for Roles.Role;
+
+  // Define 2 events, one for Adding, and other for Removing
+  event AirlineAdded(address indexed account);
+  event AirlineRemoved(address indexed account);
+
+  // Define a struct 'airlines' by inheriting from 'Roles' library, struct Role
+  Roles.Role private airlines;
+
+  // In the constructor make the address that deploys this contract the 1st airline
+  constructor() public {
+    _addAirline(msg.sender);
+  }
+
+  // Define a modifier that checks to see if msg.sender has the appropriate role
+  modifier onlyAirline() {
+    require(isAirline(msg.sender), "You are not the Airline!");
+    _;
+  }
+
+  // Define a function 'isAirline' to check this role
+  function isAirline(address account) public view returns (bool) {
+    return airlines.has(account);
+  }
+
+  // Define a function 'addAirline' that adds this role
+  function addAirline(address account) public onlyAirline {
+    _addAirline(account);
+  }
+
+  // Define a function 'renounceAirline' to renounce this role
+  function renounceAirline() public {
+    _removeAirline(msg.sender);
+  }
+
+  // Define an internal function '_addAirline' to add this role, called by 'addAirline'
+  function _addAirline(address account) internal {
+    airlines.add(account);
+    emit AirlineAdded(account);
+  }
+
+  // Define an internal function '_removeAirline' to remove this role, called by 'removeAirline'
+  function _removeAirline(address account) internal {
+    airlines.remove(account);
+    emit AirlineRemoved(account);
+  }
+}
+
+// File: contracts\FlightSuretyApp.sol
+
+pragma solidity ^0.4.25;
+// pragma experimental ABIEncoderV2; // MWJ TESTING RETURNING A STRUCT...
+
+// It's important to avoid vulnerabilities due to numeric overflow bugs
+// OpenZeppelin's SafeMath library, when used correctly, protects agains such bugs
+// More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
+
+// import "./SafeMath.sol";
+
+// import "../FlightSuretyCore/Ownable.sol"; // TBD
+
+/************************************************** */
+/* FlightSurety Smart Contract                      */
+/************************************************** */
+contract FlightSuretyApp is AirlineRole {
+    using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to "prototype" in Javascript)
+
+    /********************************************************************************************/
+    /*                                       DATA VARIABLES                                     */
+    /********************************************************************************************/
+    // Add "state variable" for the external data contract
+    FlightSuretyData flightSuretyData; // NEEDS TO BE INITIALIZED... see Constructor
+
+    // Flight status codees
+    uint8 private constant STATUS_CODE_UNKNOWN = 0;
+    uint8 private constant STATUS_CODE_ON_TIME = 10;
+    uint8 private constant STATUS_CODE_LATE_AIRLINE = 20; // MWJ: Only one for triggering payment process per VIDEO
+    uint8 private constant STATUS_CODE_LATE_WEATHER = 30;
+    uint8 private constant STATUS_CODE_LATE_TECHNICAL = 40;
+    uint8 private constant STATUS_CODE_LATE_OTHER = 50;
+
+    address private contractOwner;          // Account used to deploy contract
+
+     // For ORACLES...
+    struct Flight {
+        bool isRegistered;
+        uint8 statusCode;
+        uint256 updatedTimestamp;        
+        address airline;
+    }
+    mapping(bytes32 => Flight) private flights;
+
+    // My Additions
+    struct AirlineView {
+        string name;
+        bool isRegistered;
+        bool isFunded;
+        uint256 balance;
+        // bool isActive;
+        address wallet;
+        uint256 currVoteCountM;
+        uint256 currTtlVotersN;
+    }
+
+    /********************************************************************************************/
+    /*                                       EVENT DEFINITIONS                                  */
+    /********************************************************************************************/
+    // Production events
+    event AirlineRegisteredAPP(bool _success);
+    event AirlineFundedAPP(bool _success);
+
+    // Define debugging event
+    event LoggingAPP(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
+
+    /********************************************************************************************/
+    /*                                       FUNCTION MODIFIERS                                 */
+    /********************************************************************************************/
+
+    // Modifiers help avoid duplication of code. They are typically used to validate something
+    // before a function is allowed to be executed.
+
+    /**
+    * @dev Modifier that requires the "operational" boolean variable to be "true"
+    *      This is used on all state changing functions to pause the contract in 
+    *      the event there is an issue that needs to be fixed
+    */
+    modifier requireIsOperational() 
+    {
+         // Modify to call data contract's status
+        require(true, "Contract is currently not operational");  
+        _;  // All modifiers require an "_" which indicates where the function body will be added
+    }
+
+    /**
+    * @dev Modifier that requires the "ContractOwner" account to be the function caller
+    */
+    modifier requireContractOwner()
+    {
+        require(msg.sender == contractOwner, "Caller is not contract owner");
+        _;
+    }
+
+    /// @dev Define a modifer that verifies the Caller
+    modifier verifyCaller (address _address) {
+        require(msg.sender == _address); 
+        _;
+    }
+
+    /********************************************************************************************/
+    /*                                       CONSTRUCTOR                                        */
+    /********************************************************************************************/
+
+    /**
+    * @dev Contract constructor
+    *
+    */
+    constructor(
+        // Address parameter for data contract
+        // Passed the address of the deployed instance
+        // of the data contract
+        // data contract is deployed first / previously
+        // ONLY here and NOT on data contract because
+        // The calls are UNIDIRECTIONAL - only calling
+        // INTO the data contract from here - NEVER from
+        // there to here
+        address dataContractAddr,   // INPUT to constructor
+        address firstAirlineAddr    // INPUT to constructor
+    ) 
+        public 
+    {
+        contractOwner = msg.sender;
+        flightSuretyData = FlightSuretyData(dataContractAddr);
+        addAirline(firstAirlineAddr); // Add to list of airlines for Role Checking        
+    }
+
+    /********************************************************************************************/
+    /*                                       UTILITY FUNCTIONS                                  */
+    /********************************************************************************************/
+
+    function isOperational(
+
+    ) 
+        public 
+        pure 
+        returns(bool) 
+    {
+        return true;  // Modify to call data contract's status
+    }
+
+    /********************************************************************************************/
+    /*                                     SMART CONTRACT FUNCTIONS                             */
+    /********************************************************************************************/
+
+  
+   /**
+    * @dev ADD an airline to the registration list
+    *
+    */   
+    function registerAirline(
+        string  _name,
+        address _addr,
+        address _sponsor
+    )
+        onlyAirline
+        verifyCaller(_sponsor)
+        external
+        // payable
+        returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
+    {
+        uint256 votes;
+        require(!flightSuretyData.isAirlineRegistered(_name), "Airline is already registered.");
+        // Register new airline 
+        addAirline(_addr); // Add to list of airlines for Role Checking        
+        success = flightSuretyData.registerAirline(_name, _addr);
+        // // When registered, it will have 1 vote, but could retrieve actual value
+        // if (success) {votes = 1;} else {votes = 0;}
+        // // return (success, votes);
+        emit AirlineRegisteredAPP(success);
+        emit LoggingAPP("FS APP registerAirline(): ", 
+            _name, 
+            0, 
+            // votes,
+            flightSuretyData.getAirlineCount(), // Gets Correct Number, while called from test doesn't!
+            // success,
+            flightSuretyData.isAirlineRegistered(_name), 
+            _addr // _sponsor
+        );
+        
+        return (success);
+    }
+
+   /**
+    * @dev Retrieve a registered airline from registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */   
+    function retrieveAirline(string _name)
+        external
+        view
+        returns (
+            string airName, 
+            bool airIsRegd, 
+            bool airIsFunded, 
+            uint256 airBal, 
+            address airAddr,
+            uint256 airVoteCount,
+            uint256 airTtlVoters
+        )
+    {
+        // THIS WORKS for returning an object/structure
+        AirlineView memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.currVoteCountM,
+         airlineView.currTtlVotersN
+        ) = flightSuretyData.retrieveAirline(_name);
+            airName = airlineView.name;
+            airIsRegd = airlineView.isRegistered;
+            airIsFunded = airlineView.isFunded;
+            airBal = airlineView.balance;
+            airAddr = airlineView.wallet;
+            airVoteCount = airlineView.currVoteCountM;
+            // airTtlVoters = airlineView.currTtlVotersN;
+            airTtlVoters = flightSuretyData.getAirlineCount();
+
+        return (
+            airName,
+            airIsRegd,
+            airIsFunded,
+            airBal,
+            airAddr,
+            airVoteCount,
+            airTtlVoters
+        );
+    }
+
+   /**
+    * @dev FUND an airline previously added to the registration list
+    *
+    */   
+    function fundAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
+    )
+        // onlyAirline
+        // verifyCaller(_addr)
+        external
+        payable
+        returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
+    {
+        uint256 votes;
+        require(flightSuretyData.isAirlineRegistered(_name), "Airline is NOT registered.");
+        // require(_bal >= 10, "Insufficuent funds provided to register your airline.");
+        // Register new airline 
+        // addAirline(_addr); // Add to list of airlines for Role Checking        
+        success = flightSuretyData.fundAirline(_name, _bal, _addr);
+        // When registered, it will have 1 vote, but could retrieve actual value
+        if (success) {votes = 1;} else {votes = 0;}
+        // return (success, votes);
+        emit AirlineFundedAPP(success);
+        emit LoggingAPP("FS APP fundAirline(): ", 
+            _name, 
+            _bal, 
+            votes,
+            // success,
+            flightSuretyData.isAirlineFunded(_name), 
+            _addr
+        );
+        
+        return (success);
+    }
+
+    function getAirlineCount()
+        public
+        view
+        returns(uint256 _count)
+    {
+        _count = flightSuretyData.getAirlineCount();
+        return _count;
+    }
+
+    function getAirlineName(uint256 _num)
+        public
+        view
+        returns(string _name)
+    {
+        _name = flightSuretyData.getAirlineName(_num);
+        return _name;
+    }
+
+
+   /**
+    * @dev Register a future flight for insuring.
+    *
+    */  
+    function registerFlight(
+    )
+        external
+        pure
+    {
+
+    }
+    
+   /**
+    * @dev Called after oracle has updated flight status
+    *
+    */  
+    function processFlightStatus(
+        address airline,
+        string memory flight,
+        uint256 timestamp,
+        uint8 statusCode
+    )
+        internal
+        pure
+    {
+
+    }
+
+
+    // Generate a request for oracles to fetch flight information
+    function fetchFlightStatus(
+        address airline,
+        string flight,
+        uint256 timestamp                            
+    )
+        external
+    {
+        uint8 index = getRandomIndex(msg.sender);
+
+        // Generate a unique key for storing the request
+        bytes32 key = keccak256(abi.encodePacked(index, airline, flight, timestamp));
+        oracleResponses[key] = ResponseInfo({
+                                                requester: msg.sender,
+                                                isOpen: true
+                                            });
+
+        emit OracleRequest(index, airline, flight, timestamp);
+    } 
+
+
+// region ORACLE MANAGEMENT - From ORACLES CLass/Section/Video/Lessons
+
+    // Incremented to add pseudo-randomness at various points
+    uint8 private nonce = 0;    
+
+    // Fee to be paid when registering oracle
+    uint256 public constant REGISTRATION_FEE = 1 ether;
+
+    // Number of oracles that must respond for valid status
+    uint256 private constant MIN_RESPONSES = 3;
+
+
+    struct Oracle {
+        bool isRegistered;
+        uint8[3] indexes;        
+    }
+
+    // Track all registered oracles
+    mapping(address => Oracle) private oracles;
+
+    // Model for responses from oracles
+    struct ResponseInfo {
+        address requester;                              // Account that requested status
+        bool isOpen;                                    // If open, oracle responses are accepted
+        mapping(uint8 => address[]) responses;          // Mapping key is the status code reported
+                                                        // This lets us group responses and identify
+                                                        // the response that majority of the oracles
+    }
+
+    // Track all oracle responses
+    // Key = hash(index, flight, timestamp)
+    mapping(bytes32 => ResponseInfo) private oracleResponses;
+
+    // Event fired each time an oracle submits a response
+    event FlightStatusInfo(address airline, string flight, uint256 timestamp, uint8 status);
+
+    event OracleReport(address airline, string flight, uint256 timestamp, uint8 status);
+
+    // Event fired when flight status request is submitted
+    // Oracles track this and if they have a matching index
+    // they fetch data and submit a response
+    event OracleRequest(uint8 index, address airline, string flight, uint256 timestamp);
+
+
+    // Register an oracle with the contract
+    function registerOracle
+                            (
+                            )
+                            external
+                            payable
+    {
+        // Require registration fee
+        require(msg.value >= REGISTRATION_FEE, "Registration fee is required");
+
+        uint8[3] memory indexes = generateIndexes(msg.sender);
+
+        oracles[msg.sender] = Oracle({
+                                        isRegistered: true,
+                                        indexes: indexes
+                                    });
+    }
+
+    function getMyIndexes
+                            (
+                            )
+                            view
+                            external
+                            returns(uint8[3])
+    {
+        require(oracles[msg.sender].isRegistered, "Not registered as an oracle");
+
+        return oracles[msg.sender].indexes;
+    }
+
+
+
+
+    // Called by oracle when a response is available to an outstanding request
+    // For the response to be accepted, there must be a pending request that is open
+    // and matches one of the three Indexes randomly assigned to the oracle at the
+    // time of registration (i.e. uninvited oracles are not welcome)
+    function submitOracleResponse
+                        (
+                            uint8 index,
+                            address airline,
+                            string flight,
+                            uint256 timestamp,
+                            uint8 statusCode
+                        )
+                        external
+    {
+        require((oracles[msg.sender].indexes[0] == index) || (oracles[msg.sender].indexes[1] == index) || (oracles[msg.sender].indexes[2] == index), "Index does not match oracle request");
+
+
+        bytes32 key = keccak256(abi.encodePacked(index, airline, flight, timestamp)); 
+        require(oracleResponses[key].isOpen, "Flight or timestamp do not match oracle request");
+
+        oracleResponses[key].responses[statusCode].push(msg.sender);
+
+        // Information isn't considered verified until at least MIN_RESPONSES
+        // oracles respond with the *** same *** information
+        emit OracleReport(airline, flight, timestamp, statusCode);
+        if (oracleResponses[key].responses[statusCode].length >= MIN_RESPONSES) {
+
+            emit FlightStatusInfo(airline, flight, timestamp, statusCode);
+
+            // Handle flight status as appropriate
+            processFlightStatus(airline, flight, timestamp, statusCode);
+        }
+    }
+
+
+    function getFlightKey
+                        (
+                            address airline,
+                            string flight,
+                            uint256 timestamp
+                        )
+                        pure
+                        internal
+                        returns(bytes32) 
+    {
+        return keccak256(abi.encodePacked(airline, flight, timestamp));
+    }
+
+    // Returns array of three non-duplicating integers from 0-9
+    function generateIndexes
+                            (                       
+                                address account         
+                            )
+                            internal
+                            returns(uint8[3])
+    {
+        uint8[3] memory indexes;
+        indexes[0] = getRandomIndex(account);
+        
+        indexes[1] = indexes[0];
+        while(indexes[1] == indexes[0]) {
+            indexes[1] = getRandomIndex(account);
+        }
+
+        indexes[2] = indexes[1];
+        while((indexes[2] == indexes[0]) || (indexes[2] == indexes[1])) {
+            indexes[2] = getRandomIndex(account);
+        }
+
+        return indexes;
+    }
+
+    // Returns array of three non-duplicating integers from 0-9
+    function getRandomIndex
+                            (
+                                address account
+                            )
+                            internal
+                            returns (uint8)
+    {
+        uint8 maxValue = 10;
+
+        // Pseudo random number...the incrementing nonce adds variation
+        uint8 random = uint8(uint256(keccak256(abi.encodePacked(blockhash(block.number - nonce++), account))) % maxValue);
+
+        if (nonce > 250) {
+            nonce = 0;  // Can only fetch blockhashes for last 256 blocks so we adapt
+        }
+
+        return random;
+    }
+
+// endregion
+
+}   
+

@@ -2,6 +2,7 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
+  target: 'web', // Added by MWJ despite it being default
   entry: ['babel-polyfill', path.join(__dirname, "src/dapp")],
   output: {
     path: path.join(__dirname, "prod/dapp"),
@@ -48,5 +49,11 @@ module.exports = {
     contentBase: path.join(__dirname, "dapp"),
     port: 8000,
     stats: "minimal"
-  }
+  },
+  node: {
+    fs: "empty"
+ },
+  externals:[{
+    xmlhttprequest: '{XMLHttpRequest:XMLHttpRequest}'
+  }]
 };

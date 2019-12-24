@@ -6,6 +6,7 @@ pragma solidity ^0.4.25;
 // More info: https://www.nccgroup.trust/us/about-us/newsroom-and-events/blog/2018/november/smart-contract-insecurity-bad-arithmetic/
 
 import "../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol";
+// import "./SafeMath.sol";
 
 import "./FlightSuretyAccessControl/AirlineRole.sol";
 // import "../FlightSuretyCore/Ownable.sol"; // TBD
@@ -15,6 +16,9 @@ import "./FlightSuretyAccessControl/AirlineRole.sol";
 /************************************************** */
 contract FlightSuretyApp is AirlineRole {
     using SafeMath for uint256; // Allow SafeMath functions to be called for all uint256 types (similar to "prototype" in Javascript)
+
+    // CONSTANTS
+    uint256 AIRLINE_REG_FEE = 1; // ether;
 
     /********************************************************************************************/
     /*                                       DATA VARIABLES                                     */
@@ -46,11 +50,16 @@ contract FlightSuretyApp is AirlineRole {
         string name;
         bool isRegistered;
         bool isFunded;
+        bool isCharterMember;
+        bool isVoterApproved;
+        bool isRejected;
         uint256 balance;
-        // bool isActive;
         address wallet;
-        uint256 currVoteCountM;
-        uint256 currTtlVotersN;
+        uint256 votesYes;
+        uint256 votesNo;
+        uint256 index;
+        uint256 totalAirlines;
+        uint256 totalVoters;
     }
 
     /********************************************************************************************/
@@ -58,6 +67,8 @@ contract FlightSuretyApp is AirlineRole {
     /********************************************************************************************/
     // Production events
     event AirlineRegisteredAPP(bool _success);
+    event AirlineFundedAPP(bool _success);
+    event CheckAirlinePropAPP(string _airline, string _prop, bool _result);
 
     // Define debugging event
     event LoggingAPP(string _message, string _text, uint256 _num1, uint256 _num2, bool _bool, address _addr);
@@ -88,6 +99,26 @@ contract FlightSuretyApp is AirlineRole {
     {
         require(msg.sender == contractOwner, "Caller is not contract owner");
         _;
+    }
+
+    /// @dev Define a modifer that verifies the Caller
+    modifier verifyCaller (address _address) {
+        require(msg.sender == _address); 
+        _;
+    }
+
+    /// @dev Define a modifier that checks if the paid amount is sufficient to cover the price
+    modifier paidEnough(uint256 _price) { 
+        require(msg.value >= _price); 
+        _;
+    }
+    
+    /// @dev Define a modifier that returns overpayment
+    modifier checkValue(address _payer, uint256 _price) {
+        _; // This structure gets the modifier to execute AFTER the function instead of usually first.
+        uint256 amountPaid = msg.value;
+        uint256 amountToReturn = amountPaid.sub(_price);
+        _payer.transfer(amountToReturn);
     }
 
     /********************************************************************************************/
@@ -142,34 +173,49 @@ contract FlightSuretyApp is AirlineRole {
     */   
     function registerAirline(
         string  _name,
-        uint256 _bal,
-        address _addr
+        address _addr,
+        address _sponsor
     )
         onlyAirline
+        verifyCaller(_sponsor)
         external
         returns(bool success) // , uint256 votes) // 'votes' is their idea on this function. Me = TBD
     {
-        uint256 votes;
+        // uint256 votes;
         require(!flightSuretyData.isAirlineRegistered(_name), "Airline is already registered.");
-        require(_bal >= 10, "Insufficuent funds provided to register your airline.");
         // Register new airline 
         addAirline(_addr); // Add to list of airlines for Role Checking        
-        success = flightSuretyData.registerAirline(_name, _bal, _addr);
-        // When registered, it will have 1 vote, but could retrieve actual value
-        if (success) {votes = 1;} else {votes = 0;}
-        // return (success, votes);
+        success = flightSuretyData.registerAirline(_name, _addr);
+        // // When registered, it will have 1 vote, but could retrieve actual value
+        // if (success) {votes = 1;} else {votes = 0;}
+        // // return (success, votes);
         emit AirlineRegisteredAPP(success);
         emit LoggingAPP("FS APP registerAirline(): ", 
             _name, 
-            _bal, 
-            votes,
+            0, 
+            // votes,
+            flightSuretyData.getAirlineCount("all"), // Gets Correct Number, while called from test doesn't!
             // success,
             flightSuretyData.isAirlineRegistered(_name), 
-            _addr
+            _addr // _sponsor
         );
         
         return (success);
     }
+
+   /**
+    * @dev CHECK IF an airline is in registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */
+    function isAirlineRegistered(string _name)
+        // external
+        public
+        view
+        returns (bool)
+        {
+            return flightSuretyData.isAirlineRegistered(_name);
+        }
 
    /**
     * @dev Retrieve a registered airline from registration list
@@ -183,10 +229,74 @@ contract FlightSuretyApp is AirlineRole {
             string airName, 
             bool airIsRegd, 
             bool airIsFunded, 
+            // bool airIsCharterMember, 
+            // bool airIsVoterApproved, 
+            // bool airIsRejected, 
             uint256 airBal, 
             address airAddr,
-            uint256 airVoteCount,
-            uint256 airTtlVoters
+            uint256 airVoteYesCount,
+            // uint256 airVoteNoCount,
+            uint256 airIndex
+        )
+    {
+        // THIS WORKS for returning an object/structure
+        AirlineView memory airlineView;
+        (airlineView.name,
+         airlineView.isRegistered,
+         airlineView.isFunded,
+        //  airlineView.isCharterMember,
+        //  airlineView.isVoterApproved,
+        //  airlineView.isRejected,
+         airlineView.balance,
+         airlineView.wallet,
+         airlineView.votesYes,
+        //  airlineView.votesNo,
+         airlineView.index
+        ) = flightSuretyData.retrieveAirline(_name);
+            airName = airlineView.name;
+            airIsRegd = airlineView.isRegistered;
+            airIsFunded = airlineView.isFunded;
+            // airIsCharterMember = airlineView.isCharterMember;
+            // airIsVoterApproved = airlineView.isVoterApproved;
+            // airIsRejected = airlineView.isRejected;
+            airBal = airlineView.balance;
+            airAddr = airlineView.wallet;
+            airVoteYesCount = airlineView.votesYes;
+            // airVoteNoCount = airlineView.votesNo;
+            airIndex = airlineView.index;
+            // airIndex = flightSuretyData.getAirlineCount("all");
+
+        return (
+            airName,
+            airIsRegd,
+            airIsFunded,
+            // airIsCharterMember,
+            // airIsVoterApproved,
+            // airIsRejected,
+            airBal,
+            airAddr,
+            airVoteYesCount,
+            // airVoteNoCount,
+            airIndex
+        );
+    }
+
+   /**
+    * @dev Fetch part A of a registered airline from registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */   
+    function fetchAirlinePartA(string _name)
+        external
+        view
+        returns (
+            string airName, 
+            bool airIsRegd, 
+            bool airIsFunded, 
+            uint256 airBal, 
+            address airAddr,
+            uint256 airVoteYesCount,
+            uint256 airIndex
         )
     {
         // THIS WORKS for returning an object/structure
@@ -196,16 +306,16 @@ contract FlightSuretyApp is AirlineRole {
          airlineView.isFunded,
          airlineView.balance,
          airlineView.wallet,
-         airlineView.currVoteCountM,
-         airlineView.currTtlVotersN
-        ) = flightSuretyData.retrieveAirline(_name);
+         airlineView.votesYes,
+         airlineView.index
+        ) = flightSuretyData.fetchAirlinePartA(_name);
             airName = airlineView.name;
             airIsRegd = airlineView.isRegistered;
             airIsFunded = airlineView.isFunded;
             airBal = airlineView.balance;
             airAddr = airlineView.wallet;
-            airVoteCount = airlineView.currVoteCountM;
-            airTtlVoters = airlineView.currTtlVotersN;
+            airVoteYesCount = airlineView.votesYes;
+            airIndex = airlineView.index;
 
         return (
             airName,
@@ -213,10 +323,156 @@ contract FlightSuretyApp is AirlineRole {
             airIsFunded,
             airBal,
             airAddr,
-            airVoteCount,
-            airTtlVoters
+            airVoteYesCount,
+            airIndex
         );
     }
+
+   /**
+    * @dev Fetch part B of a registered airline from registration list
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */   
+    function fetchAirlinePartB(string _name)
+        external
+        view
+        returns (
+            string airName, // in both parts A and B
+            bool airIsCharterMember, 
+            bool airIsVoterApproved, 
+            bool airIsRejected, 
+            uint256 airVoteNoCount,
+            uint256 airIndex, // in both parts A and B
+            uint256 totalAirlines,
+            uint256 totalVoters
+        )
+    {
+        // THIS WORKS for returning an object/structure
+        AirlineView memory airlineView;
+        (airlineView.name,
+         airlineView.isCharterMember,
+         airlineView.isVoterApproved,
+         airlineView.isRejected,
+         airlineView.votesNo,
+         airlineView.index,
+         airlineView.totalAirlines,
+         airlineView.totalVoters 
+        ) = flightSuretyData.fetchAirlinePartB(_name);
+            airName = airlineView.name;
+            airIsCharterMember = airlineView.isCharterMember;
+            airIsVoterApproved = airlineView.isVoterApproved;
+            airIsRejected = airlineView.isRejected;
+            airVoteNoCount = airlineView.votesNo;
+            airIndex = airlineView.index;
+            totalAirlines = airlineView.totalAirlines;
+            totalVoters = airlineView.totalVoters;
+        return (
+            airName,
+            airIsCharterMember,
+            airIsVoterApproved,
+            airIsRejected,
+            airVoteNoCount,
+            airIndex,
+            totalAirlines,
+            totalVoters
+        );
+    }
+
+   /**
+    * @dev FUND an airline previously added to the registration list
+    *
+    */   
+    function fundAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
+    )
+        onlyAirline
+        verifyCaller(_addr)
+        paidEnough(AIRLINE_REG_FEE)
+        checkValue(_addr, AIRLINE_REG_FEE)        
+        external
+        payable
+        returns(bool success)
+    {
+        uint256 votes;
+        require(flightSuretyData.isAirlineRegistered(_name), "Airline is NOT registered.");
+        require(_bal >= AIRLINE_REG_FEE, "Insufficuent funds provided to APP contract to register your airline.");
+        require(msg.value >= AIRLINE_REG_FEE, "Insufficuent msg.value provided to APP contract to register your airline.");
+        // Funding the newly approved airline 
+        // success = flightSuretyData.fundAirline(_name, AIRLINE_REG_FEE, _addr, {value: AIRLINE_REG_FEE}); // NOPE
+        success = flightSuretyData.fundAirline(_name, AIRLINE_REG_FEE, _addr);
+        // addVoter(_addr); // Add to list of Voters for Role Checking        
+        if (success) {votes = 1;} else {votes = 0;} // THIS WILL CHANGE
+        emit AirlineFundedAPP(success);
+        emit LoggingAPP("FS APP fundAirline(): ", 
+            _name, 
+            _bal, 
+            votes,
+            true, // flightSuretyData.isAirlineFunded(_name), 
+            _addr
+        );
+        
+        return (success);
+    }
+
+   /**
+    * @dev CHECK IF a previously registered airline has been funded
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */
+    function isAirlineFunded(string _name) // ALWAYS FALSE
+        // external
+        public
+        view
+        returns (bool)
+    {
+        return flightSuretyData.isAirlineFunded(_name);
+    }
+
+   /**
+    * @dev RETRIEVE an airline PROPERTY
+    *      Can only be called from FlightSuretyApp contract
+    *
+    */
+    function getAirlineProperty(string _airline, string _prop)
+        // external
+        public
+        view
+        returns (bool _result)
+    {
+        _result = flightSuretyData.getAirlineProperty(_airline, _prop);
+            // emit CheckAirlinePropAPP(_airline, _prop, _result);
+            return (_result);
+    }
+
+    /**
+    * @dev Retrieve number of ALL registered airlines  via _listName == "all" from array.length
+    *      or all of FUNDED airline names that were pushed onto the airNamesList or airNamesFundedList 
+    *      array at registration
+    */
+    function getAirlineCount(string _listName)
+        public
+        view
+        returns(uint256 _count)
+    {
+        _count = flightSuretyData.getAirlineCount(_listName);
+        return _count;
+    }
+
+    /**
+    * @dev Retrieve NAME of registered airline from flightSuretyData in the airNamesList or airNamesFundedList array
+    *
+    */
+    function getAirlineName(string _listName, uint256 _num)
+        public
+        view
+        returns(string _name)
+    {
+        _name = flightSuretyData.getAirlineName(_listName, _num);
+        return _name;
+    }
+
 
    /**
     * @dev Register a future flight for insuring.
@@ -445,13 +701,26 @@ contract FlightSuretyApp is AirlineRole {
 contract FlightSuretyData {
     function registerAirline(
         string  _name,
-        uint256 _bal,
         address _addr
     )
     external
     returns (bool);
 
     function isAirlineRegistered(string _name)
+        // external
+        public
+        view
+        returns (bool);
+
+    function fundAirline(
+        string  _name,
+        uint256 _bal,
+        address _addr
+    )
+    external
+    returns (bool);
+
+    function isAirlineFunded(string _name)
         // external
         public
         view
@@ -464,10 +733,56 @@ contract FlightSuretyData {
             string airName, 
             bool airIsRegd, 
             bool airIsFunded, 
+            // bool airIsCharterMember, 
+            // bool airIsVoterApproved, 
+            // bool airIsRejected, 
             uint256 airBal, 
             address airAddr,
-            uint256 airVoteCount,
-            uint256 airTtlVoters
+            uint256 airVoteYesCount,
+            // uint256 airVoteNoCount,
+            uint256 airIndex
         );
+
+    function fetchAirlinePartA(string _name)
+        public
+        view
+        returns (
+            string airName, 
+            bool airIsRegd, 
+            bool airIsFunded, 
+            uint256 airBal, 
+            address airAddr,
+            uint256 airVoteYesCount,
+            uint256 airIndex
+        );
+
+    function fetchAirlinePartB(string _name)
+        public
+        view
+        returns (
+            string airName, 
+            bool airIsCharterMember, 
+            bool airIsVoterApproved, 
+            bool airIsRejected, 
+            uint256 airVoteNoCount,
+            uint256 airIndex,
+            uint256 ttlAirlines,
+            uint256 ttlVoters
+        );
+
+    function getAirlineCount(string _listName)
+        public
+        view
+        returns(uint256 _count);
+
+    function getAirlineName(string _listName, uint256 _num)
+        public
+        view
+        returns(string _name);
+
+    function getAirlineProperty(string _airline, string _prop)
+        public
+        view
+        returns (bool _result);
 
 }
